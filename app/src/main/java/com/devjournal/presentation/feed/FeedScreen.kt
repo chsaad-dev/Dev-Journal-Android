@@ -64,7 +64,8 @@ fun FeedScreen(
     viewModel: FeedViewModel = hiltViewModel(),
     onPostClick: (String) -> Unit,
     onProfileClick: () -> Unit,
-    onNewPostClick: () -> Unit
+    onNewPostClick: () -> Unit,
+    onEditPostClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedNavIndex by remember { mutableIntStateOf(0) }
@@ -266,7 +267,9 @@ fun FeedScreen(
                             },
                             onCommentClick = { onPostClick(post.id) },
                             onShareClick = { /* Share functionality */ },
-                            onPostClick = { onPostClick(post.id) }
+                            onPostClick = { onPostClick(post.id) },
+                            canEdit = uiState.isAdmin && (post.authorId == uiState.currentUserId || uiState.isAdmin),
+                            onEditClick = { onEditPostClick(post.id) }
                         )
                     }
                 }

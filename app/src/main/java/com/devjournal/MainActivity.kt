@@ -17,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.devjournal.presentation.auth.LoginScreen
+import com.devjournal.presentation.editor.PostEditorScreen
 import com.devjournal.presentation.feed.FeedScreen
 import com.devjournal.presentation.postdetail.PostDetailScreen
 import com.devjournal.presentation.profile.ProfileScreen
@@ -53,6 +54,9 @@ class MainActivity : ComponentActivity() {
                             },
                             onNewPostClick = {
                                 navController.navigate("editor")
+                            },
+                            onEditPostClick = { postId ->
+                                navController.navigate("editor/$postId")
                             }
                         )
                     }
@@ -84,7 +88,30 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("editor") {
-                        ScreenPlaceholder(title = "Article Editor")
+                        PostEditorScreen(
+                            postId = null,
+                            onBackClick = {
+                                navController.popBackStack()
+                            },
+                            onSaved = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+                    composable(
+                        route = "editor/{postId}",
+                        arguments = listOf(navArgument("postId") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val postId = backStackEntry.arguments?.getString("postId") ?: ""
+                        PostEditorScreen(
+                            postId = postId,
+                            onBackClick = {
+                                navController.popBackStack()
+                            },
+                            onSaved = {
+                                navController.popBackStack()
+                            }
+                        )
                     }
                 }
             }

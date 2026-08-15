@@ -10,4 +10,7 @@ interface PostRepository {
     fun getLikedPosts(uid: String): Flow<List<Post>>
     suspend fun likePost(postId: String, uid: String)
     suspend fun unlikePost(postId: String, uid: String)
+    suspend fun createPost(post: Post): Result<String>
+    suspend fun updatePost(postId: String, post: Post): Result<Unit>
+    suspend fun getDraftById(postId: String): Post?
 }

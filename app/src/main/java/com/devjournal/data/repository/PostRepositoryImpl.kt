@@ -114,4 +114,72 @@ class PostRepositoryImpl @Inject constructor(
             }
         }.await()
     }
+
+    override suspend fun createPost(post: Post): Result<String> = try {
+        val newDoc = firestore.collection("posts").document()
+        val slug = generateSlug(post.title)
+        val words = post.content.split(Regex("\\s+")).count { it.isNotBlank() }
+        val readTime = maxOf(1, words / 200)
+
+        val postMap = hashMapOf(
+            "id" to newDoc.id,
+            "title" to post.title,
+            "slug" to slug,
+            "content" to post.content,
+            "excerpt" to post.excerpt,
+            "coverImageUrl" to post.coverImageUrl,
+            "coverImagePublicId" to post.coverImagePublicId,
+            "authorId" to post.authorId,
+            "tags" to post.tags,
+            "published" to post.published,
+            "readTimeMinutes" to readTime,
+            "likeCount" to 0,
+            "commentCount" to 0,
+            "createdAt" to FieldValue.serverTimestamp(),
+            "updatedAt" to FieldValue.serverTimestamp()
+        )
+        newDoc.set(postMap).await()
+        Result.success(newDoc.id)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    override suspend fun updatePost(postId: String, post: Post): Result<Unit> = try {
+        val docRef = firestore.collection("posts").document(postId)
+        val slug = generateSlug(post.title)
+        val words = post.content.split(Regex("\\s+")).count { it.isNotBlank() }
+        val readTime = maxOf(1, words / 200)
+
+        val updates = hashMapOf<String, Any>(
+            "title" to post.title,
+            "slug" to slug,
+            "content" to post.content,
+            "excerpt" to post.excerpt,
+            "coverImageUrl" to post.coverImageUrl,
+            "coverImagePublicId" to post.coverImagePublicId,
+            "tags" to post.tags,
+            "published" to post.published,
+            "readTimeMinutes" to readTime,
+            "updatedAt" to FieldValue.serverTimestamp()
+        )
+        docRef.update(updates).await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    override suspend fun getDraftById(postId: String): Post? = try {
+        val snapshot = firestore.collection("posts").document(postId).get().await()
+        snapshot.toObject(Post::class.java)
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun generateSlug(title: String): String {
+        val normalized = title.lowercase(java.util.Locale.ROOT)
+            .replace(Regex("[^a-z0-9\\s-]"), "")
+            .trim()
+            .replace(Regex("\\s+"), "-")
+        return normalized.ifBlank { "post-${System.currentTimeMillis()}" }
+    }
 }

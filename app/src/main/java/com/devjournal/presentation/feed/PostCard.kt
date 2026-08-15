@@ -28,8 +28,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,8 +57,11 @@ fun PostCard(
     onCommentClick: () -> Unit,
     onShareClick: () -> Unit,
     onPostClick: () -> Unit,
+    canEdit: Boolean = false,
+    onEditClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    var showMenu by remember { mutableStateOf(false) }
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -140,12 +148,33 @@ fun PostCard(
                         )
                     }
 
-                    IconButton(onClick = { /* More actions */ }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Box {
+                        IconButton(onClick = {
+                            if (canEdit) {
+                                showMenu = true
+                            }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "More",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        if (canEdit) {
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Edit Post") },
+                                    onClick = {
+                                        showMenu = false
+                                        onEditClick?.invoke()
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
 
