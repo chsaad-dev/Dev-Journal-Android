@@ -7,6 +7,7 @@ interface PostRepository {
     fun getPublishedPosts(): Flow<List<Post>>
     fun getPostById(postId: String): Flow<Post?>
     fun isPostLiked(postId: String, uid: String): Flow<Boolean>
+    fun getLikedPosts(uid: String): Flow<List<Post>>
     suspend fun likePost(postId: String, uid: String)
     suspend fun unlikePost(postId: String, uid: String)
 }

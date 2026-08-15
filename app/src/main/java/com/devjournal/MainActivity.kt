@@ -19,6 +19,7 @@ import androidx.navigation.navArgument
 import com.devjournal.presentation.auth.LoginScreen
 import com.devjournal.presentation.feed.FeedScreen
 import com.devjournal.presentation.postdetail.PostDetailScreen
+import com.devjournal.presentation.profile.ProfileScreen
 import com.devjournal.ui.theme.DevJournalTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -68,7 +69,19 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("profile") {
-                        ScreenPlaceholder(title = "Profile")
+                        ProfileScreen(
+                            onPostClick = { postId ->
+                                navController.navigate("postdetail/$postId")
+                            },
+                            onSignedOut = {
+                                navController.navigate("login") {
+                                    popUpTo("feed") { inclusive = true }
+                                }
+                            },
+                            onBackClick = {
+                                navController.popBackStack()
+                            }
+                        )
                     }
                     composable("editor") {
                         ScreenPlaceholder(title = "Article Editor")
