@@ -13,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.devjournal.presentation.auth.LoginScreen
 import com.devjournal.presentation.editor.PostEditorScreen
 import com.devjournal.presentation.feed.FeedScreen
@@ -28,6 +29,7 @@ class MainActivity : ComponentActivity() {
     private var targetPostId by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         targetPostId = intent?.getStringExtra("postId")
 
