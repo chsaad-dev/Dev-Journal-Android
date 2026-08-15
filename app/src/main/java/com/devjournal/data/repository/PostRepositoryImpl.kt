@@ -44,6 +44,21 @@ class PostRepositoryImpl @Inject constructor(
         awaitClose { listener.remove() }
     }
 
+    override fun isPostLiked(postId: String, uid: String): Flow<Boolean> = callbackFlow {
+        val listener = firestore.collection("users")
+            .document(uid)
+            .collection("likedPosts")
+            .document(postId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.exists() == true)
+            }
+        awaitClose { listener.remove() }
+    }
+
     override suspend fun likePost(postId: String, uid: String) {
         val postRef = firestore.collection("posts").document(postId)
         val likeRef = firestore.collection("users").document(uid)

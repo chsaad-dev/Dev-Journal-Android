@@ -18,6 +18,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.devjournal.presentation.auth.LoginScreen
 import com.devjournal.presentation.feed.FeedScreen
+import com.devjournal.presentation.postdetail.PostDetailScreen
 import com.devjournal.ui.theme.DevJournalTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -59,7 +60,12 @@ class MainActivity : ComponentActivity() {
                         arguments = listOf(navArgument("postId") { type = NavType.StringType })
                     ) { backStackEntry ->
                         val postId = backStackEntry.arguments?.getString("postId") ?: ""
-                        ScreenPlaceholder(title = "Post Detail ($postId)")
+                        PostDetailScreen(
+                            postId = postId,
+                            onBackClick = {
+                                navController.popBackStack()
+                            }
+                        )
                     }
                     composable("profile") {
                         ScreenPlaceholder(title = "Profile")
