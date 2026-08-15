@@ -1,5 +1,8 @@
 package com.devjournal.di
 
+import android.content.Context
+import com.devjournal.data.remote.CloudinaryUploader
+import com.devjournal.data.remote.NotifyWorkerApi
 import com.devjournal.data.repository.AuthRepositoryImpl
 import com.devjournal.data.repository.CommentRepositoryImpl
 import com.devjournal.data.repository.PostRepositoryImpl
@@ -14,7 +17,10 @@ import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
@@ -53,5 +59,29 @@ abstract class AppModule {
         @Provides
         @Singleton
         fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+        @Provides
+        @Singleton
+        fun provideOkHttpClient(): OkHttpClient {
+            return OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .build()
+        }
+
+        @Provides
+        @Singleton
+        fun provideCloudinaryUploader(
+            @ApplicationContext context: Context,
+            client: OkHttpClient
+        ): CloudinaryUploader = CloudinaryUploader(context, client)
+
+        @Provides
+        @Singleton
+        fun provideNotifyWorkerApi(
+            client: OkHttpClient
+        ): NotifyWorkerApi = NotifyWorkerApi(client)
     }
 }
+
