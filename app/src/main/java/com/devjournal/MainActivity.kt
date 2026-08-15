@@ -11,10 +11,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.devjournal.presentation.auth.LoginScreen
+import com.devjournal.presentation.feed.FeedScreen
 import com.devjournal.ui.theme.DevJournalTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -39,7 +42,30 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("feed") {
-                        FeedPlaceholder()
+                        FeedScreen(
+                            onPostClick = { postId ->
+                                navController.navigate("postdetail/$postId")
+                            },
+                            onProfileClick = {
+                                navController.navigate("profile")
+                            },
+                            onNewPostClick = {
+                                navController.navigate("editor")
+                            }
+                        )
+                    }
+                    composable(
+                        route = "postdetail/{postId}",
+                        arguments = listOf(navArgument("postId") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val postId = backStackEntry.arguments?.getString("postId") ?: ""
+                        ScreenPlaceholder(title = "Post Detail ($postId)")
+                    }
+                    composable("profile") {
+                        ScreenPlaceholder(title = "Profile")
+                    }
+                    composable("editor") {
+                        ScreenPlaceholder(title = "Article Editor")
                     }
                 }
             }
@@ -48,7 +74,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun FeedPlaceholder() {
+fun ScreenPlaceholder(title: String) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -56,7 +82,7 @@ fun FeedPlaceholder() {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "DevJournal Feed Placeholder",
+            text = title,
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
