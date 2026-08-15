@@ -297,6 +297,19 @@ fun PostDetailScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
+                    // Excerpt
+                    if (post.excerpt.isNotBlank()) {
+                        Text(
+                            text = post.excerpt,
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                lineHeight = 26.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
+
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     Spacer(modifier = Modifier.height(18.dp))

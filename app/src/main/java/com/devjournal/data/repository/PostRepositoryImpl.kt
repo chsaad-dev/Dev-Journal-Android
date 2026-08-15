@@ -122,7 +122,6 @@ class PostRepositoryImpl @Inject constructor(
         val readTime = maxOf(1, words / 200)
 
         val postMap = hashMapOf(
-            "id" to newDoc.id,
             "title" to post.title,
             "slug" to slug,
             "content" to post.content,

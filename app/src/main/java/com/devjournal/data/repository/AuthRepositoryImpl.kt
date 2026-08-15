@@ -39,6 +39,7 @@ class AuthRepositoryImpl @Inject constructor(
         return try {
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val user = result.user ?: throw Exception("User creation returned null user")
+            user.sendEmailVerification().await()
             Result.success(user)
         } catch (e: Exception) {
             Result.failure(e)

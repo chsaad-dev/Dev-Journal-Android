@@ -3,11 +3,11 @@ package com.devjournal.data.model
 import com.google.firebase.firestore.DocumentId
 
 data class UserProfile(
-    @DocumentId val uid: String = "",
-    val name: String = "",
-    val email: String = "",
-    val photoUrl: String = "",
-    val bio: String = "",
-    val role: String = "reader",
-    val fcmTokens: List<String> = emptyList()
+    @DocumentId var uid: String = "",
+    var name: String = "",
+    var email: String = "",
+    var photoUrl: String = "",
+    var bio: String = "",
+    var role: String = "reader",
+    var fcmTokens: List<String> = emptyList()
 )

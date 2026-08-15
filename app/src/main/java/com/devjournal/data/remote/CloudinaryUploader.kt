@@ -21,9 +21,9 @@ class CloudinaryUploader @Inject constructor(
     private val client: OkHttpClient
 ) {
     companion object {
-        private const val CLOUD_NAME = "YOUR_CLOUD_NAME"
-        private const val UPLOAD_PRESET = "blog_uploads"
-        private const val UPLOAD_URL = "https://api.cloudinary.com/v1_1/$CLOUD_NAME/image/upload"
+        private val CLOUD_NAME = com.devjournal.BuildConfig.CLOUDINARY_CLOUD_NAME
+        private val UPLOAD_PRESET = com.devjournal.BuildConfig.CLOUDINARY_UPLOAD_PRESET
+        private val UPLOAD_URL = "https://api.cloudinary.com/v1_1/$CLOUD_NAME/image/upload"
     }
 
     suspend fun uploadImage(uri: Uri): Result<String> = withContext(Dispatchers.IO) {
