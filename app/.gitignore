@@ -1,0 +1,15 @@
+/build
+
+# Private credentials & Firebase config
+google-services.json
+google-services-*.json
+secrets.properties
+secrets.json
+*service-account*.json
+*credentials*.json
+*.jks
+*.keystore
+*.pepk
+*.p12
+*.pem
+*.key

@@ -1,0 +1,30 @@
+# Built artifacts & IDE outputs
+*.iml
+.gradle
+local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Private Credentials & Secrets
+google-services.json
+google-services-*.json
+**/google-services.json
+*service-account*.json
+*credentials*.json
+secrets.json
+secrets.properties
+*.jks
+*.keystore
+*.pepk
+*.p12
+*.pem
+*.key
+*.crt
+*.cer
+*.env
+*.env.*
+
