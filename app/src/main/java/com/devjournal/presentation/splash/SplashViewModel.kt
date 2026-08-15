@@ -11,6 +11,11 @@ class SplashViewModel @Inject constructor(
 ) : ViewModel() {
 
     fun isUserAuthenticated(): Boolean {
-        return authRepository.currentUser != null
+        val user = authRepository.currentUser ?: return false
+        val isVerified = authRepository.isUserVerified(user)
+        if (!isVerified) {
+            authRepository.signOut()
+        }
+        return isVerified
     }
 }

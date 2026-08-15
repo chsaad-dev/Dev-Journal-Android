@@ -21,6 +21,7 @@ class SignUpUseCase @Inject constructor(
                     role = "reader"
                 )
                 userRepository.createOrUpdateUserProfile(defaultProfile)
+                authRepository.signOut()
             }
         }
         return result

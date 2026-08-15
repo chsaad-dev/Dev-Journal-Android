@@ -17,6 +17,11 @@ class AuthRepositoryImpl @Inject constructor(
     override val currentUser: FirebaseUser?
         get() = auth.currentUser
 
+    override fun isUserVerified(user: FirebaseUser): Boolean {
+        val isGoogle = user.providerData.any { it.providerId == "google.com" }
+        return isGoogle || user.isEmailVerified
+    }
+
     override fun observeAuthState(): Flow<FirebaseUser?> = callbackFlow {
         val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
             trySend(firebaseAuth.currentUser)
@@ -29,6 +34,11 @@ class AuthRepositoryImpl @Inject constructor(
         return try {
             val result = auth.signInWithEmailAndPassword(email, password).await()
             val user = result.user ?: throw Exception("Authentication returned null user")
+            user.reload().await()
+            if (!user.isEmailVerified) {
+                auth.signOut()
+                throw Exception("Please verify your email address before signing in. Check your inbox for the verification link.")
+            }
             Result.success(user)
         } catch (e: Exception) {
             Result.failure(e)
@@ -41,6 +51,18 @@ class AuthRepositoryImpl @Inject constructor(
             val user = result.user ?: throw Exception("User creation returned null user")
             user.sendEmailVerification().await()
             Result.success(user)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun resendVerificationEmail(email: String, password: String): Result<Unit> {
+        return try {
+            val result = auth.signInWithEmailAndPassword(email, password).await()
+            val user = result.user ?: throw Exception("User not found")
+            user.sendEmailVerification().await()
+            auth.signOut()
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

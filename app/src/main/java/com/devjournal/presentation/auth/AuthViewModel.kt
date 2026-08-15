@@ -2,8 +2,10 @@ package com.devjournal.presentation.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.devjournal.domain.repository.AuthRepository
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
 import com.devjournal.domain.usecase.RegisterFcmTokenUseCase
+import com.devjournal.domain.usecase.ResendVerificationEmailUseCase
 import com.devjournal.domain.usecase.SignInUseCase
 import com.devjournal.domain.usecase.SignInWithGoogleUseCase
 import com.devjournal.domain.usecase.SignUpUseCase
@@ -20,6 +22,8 @@ import javax.inject.Inject
 data class AuthUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val successMessage: String? = null,
+    val showResendButton: Boolean = false,
     val isAuthenticated: Boolean = false,
     val isSignUpMode: Boolean = false
 )
@@ -30,7 +34,9 @@ class AuthViewModel @Inject constructor(
     private val signUpUseCase: SignUpUseCase,
     private val signInWithGoogleUseCase: SignInWithGoogleUseCase,
     private val observeAuthStateUseCase: ObserveAuthStateUseCase,
-    private val registerFcmTokenUseCase: RegisterFcmTokenUseCase
+    private val registerFcmTokenUseCase: RegisterFcmTokenUseCase,
+    private val resendVerificationEmailUseCase: ResendVerificationEmailUseCase,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -46,8 +52,12 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             observeAuthStateUseCase().collect { user ->
                 if (user != null) {
-                    registerFcmTokenForUser(user.uid)
-                    _uiState.update { it.copy(isAuthenticated = true, isLoading = false) }
+                    if (authRepository.isUserVerified(user)) {
+                        registerFcmTokenForUser(user.uid)
+                        _uiState.update { it.copy(isAuthenticated = true, isLoading = false) }
+                    } else {
+                        _uiState.update { it.copy(isAuthenticated = false, isLoading = false) }
+                    }
                 }
             }
         }
@@ -55,19 +65,21 @@ class AuthViewModel @Inject constructor(
 
     fun onEmailChange(newEmail: String) {
         _email.value = newEmail
-        _uiState.update { it.copy(errorMessage = null) }
+        _uiState.update { it.copy(errorMessage = null, successMessage = null, showResendButton = false) }
     }
 
     fun onPasswordChange(newPassword: String) {
         _password.value = newPassword
-        _uiState.update { it.copy(errorMessage = null) }
+        _uiState.update { it.copy(errorMessage = null, successMessage = null) }
     }
 
     fun toggleMode() {
         _uiState.update {
             it.copy(
                 isSignUpMode = !it.isSignUpMode,
-                errorMessage = null
+                errorMessage = null,
+                successMessage = null,
+                showResendButton = false
             )
         }
     }
@@ -78,13 +90,21 @@ class AuthViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null, showResendButton = false) }
             val result = signInUseCase(email.trim(), password)
             result.onSuccess { user ->
                 registerFcmTokenForUser(user.uid)
                 _uiState.update { it.copy(isLoading = false, isAuthenticated = true) }
             }.onFailure { error ->
-                _uiState.update { it.copy(isLoading = false, errorMessage = error.localizedMessage ?: "Authentication failed") }
+                val errorMsg = error.localizedMessage ?: "Authentication failed"
+                val isUnverified = errorMsg.contains("verify", ignoreCase = true)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = errorMsg,
+                        showResendButton = isUnverified
+                    )
+                }
             }
         }
     }
@@ -99,20 +119,56 @@ class AuthViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null, showResendButton = false) }
             val result = signUpUseCase(email.trim(), password)
-            result.onSuccess { user ->
-                registerFcmTokenForUser(user.uid)
-                _uiState.update { it.copy(isLoading = false, isAuthenticated = true) }
+            result.onSuccess {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isAuthenticated = false,
+                        isSignUpMode = false,
+                        successMessage = "Account created! A verification link has been sent to ${email.trim()}. Please verify your email before signing in.",
+                        showResendButton = true
+                    )
+                }
             }.onFailure { error ->
                 _uiState.update { it.copy(isLoading = false, errorMessage = error.localizedMessage ?: "Sign up failed") }
             }
         }
     }
 
+    fun onResendVerificationClick() {
+        val currentEmail = _email.value.trim()
+        val currentPassword = _password.value
+        if (currentEmail.isBlank() || currentPassword.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Please enter your email and password to resend the verification link.") }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
+            val result = resendVerificationEmailUseCase(currentEmail, currentPassword)
+            result.onSuccess {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        successMessage = "Verification email sent to $currentEmail! Please check your inbox and spam folder.",
+                        showResendButton = false
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = error.localizedMessage ?: "Failed to resend verification email"
+                    )
+                }
+            }
+        }
+    }
+
     fun onGoogleSignInResult(idToken: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null, showResendButton = false) }
             val result = signInWithGoogleUseCase(idToken)
             result.onSuccess { user ->
                 registerFcmTokenForUser(user.uid)
