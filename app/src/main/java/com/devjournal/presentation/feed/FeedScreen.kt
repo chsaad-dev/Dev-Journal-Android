@@ -51,10 +51,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 
@@ -65,10 +72,28 @@ fun FeedScreen(
     onPostClick: (String) -> Unit,
     onProfileClick: () -> Unit,
     onNewPostClick: () -> Unit,
-    onEditPostClick: (String) -> Unit = {}
+    onEditPostClick: (String) -> Unit = {},
+    onNotificationsClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedNavIndex by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val permissionLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()
+        ) { /* permission result handled */ }
+
+        LaunchedEffect(Unit) {
+            val isGranted = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!isGranted) {
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -157,7 +182,10 @@ fun FeedScreen(
                 )
                 NavigationBarItem(
                     selected = selectedNavIndex == 1,
-                    onClick = { selectedNavIndex = 1 },
+                    onClick = {
+                        selectedNavIndex = 1
+                        onNotificationsClick()
+                    },
                     icon = { Icon(Icons.Default.Notifications, contentDescription = "Notifications") },
                     label = { Text("Notifications") },
                     colors = NavigationBarItemDefaults.colors(
