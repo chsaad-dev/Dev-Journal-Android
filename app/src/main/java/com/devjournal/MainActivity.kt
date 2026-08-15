@@ -21,6 +21,7 @@ import com.devjournal.presentation.notifications.NotificationsScreen
 import com.devjournal.presentation.postdetail.PostDetailScreen
 import com.devjournal.presentation.profile.ProfileScreen
 import com.devjournal.presentation.search.SearchScreen
+import com.devjournal.presentation.splash.SplashScreen
 import com.devjournal.ui.theme.DevJournalTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -47,16 +48,21 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val initialPostId = intent?.getStringExtra("postId")
-                val startDest = if (!initialPostId.isNullOrBlank()) {
-                    "postdetail/$initialPostId"
-                } else {
-                    "login"
-                }
 
                 NavHost(
                     navController = navController,
-                    startDestination = startDest
+                    startDestination = "splash"
                 ) {
+                    composable("splash") {
+                        SplashScreen(
+                            initialPostId = initialPostId,
+                            onNavigate = { destination ->
+                                navController.navigate(destination) {
+                                    popUpTo("splash") { inclusive = true }
+                                }
+                            }
+                        )
+                    }
                     composable("login") {
                         LoginScreen(
                             onAuthenticated = {
