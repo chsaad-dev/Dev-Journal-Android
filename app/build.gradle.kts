@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -11,10 +14,10 @@ android {
     compileSdk = 34
     buildToolsVersion = "34.0.0"
 
-    val localProperties = java.util.Properties()
+    val localProperties = Properties()
     val localPropertiesFile = rootProject.file("local.properties")
     if (localPropertiesFile.exists()) {
-        localProperties.load(java.io.FileInputStream(localPropertiesFile))
+        localProperties.load(FileInputStream(localPropertiesFile))
     }
 
     defaultConfig {
@@ -24,8 +27,8 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProperties.getProperty("CLOUDINARY_CLOUD_NAME") ?: ""}\"")
-        buildConfigField("String", "CLOUDINARY_UPLOAD_PRESET", "\"${localProperties.getProperty("CLOUDINARY_UPLOAD_PRESET") ?: ""}\"")
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${(localProperties.getProperty("CLOUDINARY_CLOUD_NAME") ?: "").removeSurrounding("\"")}\"")
+        buildConfigField("String", "CLOUDINARY_UPLOAD_PRESET", "\"${(localProperties.getProperty("CLOUDINARY_UPLOAD_PRESET") ?: "").removeSurrounding("\"")}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
