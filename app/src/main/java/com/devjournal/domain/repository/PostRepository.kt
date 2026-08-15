@@ -21,5 +21,6 @@ interface PostRepository {
     
     suspend fun createPost(post: Post): Result<String>
     suspend fun updatePost(postId: String, post: Post): Result<Unit>
+    suspend fun deletePost(postId: String): Result<Unit>
     suspend fun getDraftById(postId: String): Post?
 }

@@ -46,4 +46,19 @@ class CommentRepositoryImpl @Inject constructor(
             transaction.update(postRef, "commentCount", FieldValue.increment(1))
         }.await()
     }
+
+    override suspend fun deleteComment(postId: String, commentId: String): Result<Unit> {
+        return try {
+            val postRef = firestore.collection("posts").document(postId)
+            val commentRef = postRef.collection("comments").document(commentId)
+            
+            firestore.runTransaction { transaction ->
+                transaction.delete(commentRef)
+                transaction.update(postRef, "commentCount", FieldValue.increment(-1))
+            }.await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

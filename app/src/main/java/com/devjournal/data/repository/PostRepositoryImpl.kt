@@ -252,6 +252,13 @@ class PostRepositoryImpl @Inject constructor(
         Result.failure(e)
     }
 
+    override suspend fun deletePost(postId: String): Result<Unit> = try {
+        firestore.collection("posts").document(postId).delete().await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
     override suspend fun getDraftById(postId: String): Post? = try {
         val snapshot = firestore.collection("posts").document(postId).get().await()
         snapshot.toObject(Post::class.java)

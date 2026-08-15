@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
@@ -63,7 +64,9 @@ fun PostCard(
     onShareClick: () -> Unit,
     onPostClick: () -> Unit,
     canEdit: Boolean = false,
+    canDelete: Boolean = false,
     onEditClick: (() -> Unit)? = null,
+    onDeleteClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -153,34 +156,41 @@ fun PostCard(
                         )
                     }
 
-                    Box {
-                        IconButton(onClick = {
-                            if (canEdit) {
-                                showMenu = true
+                        if (canEdit || canDelete) {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "More",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = "More",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        if (canEdit) {
                             DropdownMenu(
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false }
                             ) {
-                                DropdownMenuItem(
-                                    text = { Text("Edit Post") },
-                                    onClick = {
-                                        showMenu = false
-                                        onEditClick?.invoke()
-                                    }
-                                )
+                                if (canEdit) {
+                                    DropdownMenuItem(
+                                        text = { Text("Edit Post") },
+                                        onClick = {
+                                            showMenu = false
+                                            onEditClick?.invoke()
+                                        }
+                                    )
+                                }
+                                if (canDelete) {
+                                    DropdownMenuItem(
+                                        text = { Text("Delete Post") },
+                                        onClick = {
+                                            showMenu = false
+                                            onDeleteClick?.invoke()
+                                        },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                                        }
+                                    )
+                                }
                             }
                         }
-                    }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))

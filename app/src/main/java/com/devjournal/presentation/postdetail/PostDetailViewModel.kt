@@ -10,8 +10,11 @@ import com.devjournal.domain.usecase.AddCommentUseCase
 import com.devjournal.domain.usecase.BookmarkPostUseCase
 import com.devjournal.domain.usecase.CheckIfBookmarkedUseCase
 import com.devjournal.domain.usecase.CheckIfLikedUseCase
+import com.devjournal.domain.usecase.DeleteCommentUseCase
+import com.devjournal.domain.usecase.DeletePostUseCase
 import com.devjournal.domain.usecase.GetCommentsUseCase
 import com.devjournal.domain.usecase.GetPostDetailUseCase
+import com.devjournal.domain.usecase.GetUserProfileUseCase
 import com.devjournal.domain.usecase.LikePostUseCase
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,6 +34,9 @@ data class PostDetailUiState(
     val currentUserId: String? = null,
     val commentInput: String = "",
     val isSubmittingComment: Boolean = false,
+    val isAdmin: Boolean = false,
+    val isDeletingPost: Boolean = false,
+    val postDeleted: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -44,6 +50,9 @@ class PostDetailViewModel @Inject constructor(
     private val addCommentUseCase: AddCommentUseCase,
     private val checkIfLikedUseCase: CheckIfLikedUseCase,
     private val observeAuthStateUseCase: ObserveAuthStateUseCase,
+    private val getUserProfileUseCase: GetUserProfileUseCase,
+    private val deletePostUseCase: DeletePostUseCase,
+    private val deleteCommentUseCase: DeleteCommentUseCase,
     private val notifyWorkerApi: NotifyWorkerApi,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -81,6 +90,10 @@ class PostDetailViewModel @Inject constructor(
                 _uiState.update { it.copy(currentUserId = user?.uid) }
                 if (user != null) {
                     launch {
+                        val profile = getUserProfileUseCase(user.uid)
+                        _uiState.update { it.copy(isAdmin = profile?.role.equals("admin", ignoreCase = true)) }
+                    }
+                    launch {
                         checkIfLikedUseCase(postId, user.uid).collect { liked ->
                             _uiState.update { it.copy(isLiked = liked) }
                         }
@@ -91,7 +104,7 @@ class PostDetailViewModel @Inject constructor(
                         }
                     }
                 } else {
-                    _uiState.update { it.copy(isLiked = false, isBookmarked = false) }
+                    _uiState.update { it.copy(isLiked = false, isBookmarked = false, isAdmin = false) }
                 }
             }
         }
@@ -163,6 +176,28 @@ class PostDetailViewModel @Inject constructor(
                 _uiState.update { it.copy(commentInput = "", isSubmittingComment = false) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isSubmittingComment = false, errorMessage = "Failed to post comment: ${e.message}") }
+            }
+        }
+    }
+
+    fun onDeletePost() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDeletingPost = true, errorMessage = null) }
+            val result = deletePostUseCase(postId)
+            result.onSuccess {
+                _uiState.update { it.copy(isDeletingPost = false, postDeleted = true) }
+            }.onFailure { e ->
+                _uiState.update { it.copy(isDeletingPost = false, errorMessage = "Failed to delete post: ${e.message}") }
+            }
+        }
+    }
+
+    fun onDeleteComment(commentId: String) {
+        viewModelScope.launch {
+            try {
+                deleteCommentUseCase(postId, commentId)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = "Failed to delete comment: ${e.message}") }
             }
         }
     }

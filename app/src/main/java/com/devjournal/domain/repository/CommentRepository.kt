@@ -6,4 +6,5 @@ import kotlinx.coroutines.flow.Flow
 interface CommentRepository {
     fun getComments(postId: String): Flow<List<Comment>>
     suspend fun addComment(postId: String, comment: Comment)
+    suspend fun deleteComment(postId: String, commentId: String): Result<Unit>
 }

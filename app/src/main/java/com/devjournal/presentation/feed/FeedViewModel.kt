@@ -8,6 +8,7 @@ import com.devjournal.domain.usecase.GetUserProfileUseCase
 import com.devjournal.domain.usecase.LikePostUseCase
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
 import com.devjournal.domain.usecase.BookmarkPostUseCase
+import com.devjournal.domain.usecase.DeletePostUseCase
 import com.devjournal.domain.usecase.ObserveLikedPostIdsUseCase
 import com.devjournal.domain.usecase.ObserveBookmarkedPostIdsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,7 +41,8 @@ class FeedViewModel @Inject constructor(
     private val observeAuthStateUseCase: ObserveAuthStateUseCase,
     private val getUserProfileUseCase: GetUserProfileUseCase,
     private val observeLikedPostIdsUseCase: ObserveLikedPostIdsUseCase,
-    private val observeBookmarkedPostIdsUseCase: ObserveBookmarkedPostIdsUseCase
+    private val observeBookmarkedPostIdsUseCase: ObserveBookmarkedPostIdsUseCase,
+    private val deletePostUseCase: DeletePostUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FeedUiState())
@@ -174,6 +176,16 @@ class FeedViewModel @Inject constructor(
                     }
                     state.copy(bookmarkedPostIds = reverted)
                 }
+            }
+        }
+    }
+
+    fun onDeletePost(postId: String) {
+        viewModelScope.launch {
+            try {
+                deletePostUseCase(postId)
+            } catch (e: Exception) {
+                // Should show error to user in a real app
             }
         }
     }
