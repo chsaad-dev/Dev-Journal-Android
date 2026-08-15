@@ -25,6 +25,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -90,6 +92,19 @@ fun PostDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = { viewModel.onBookmarkClick() },
+                        modifier = Modifier
+                            .padding(vertical = 8.dp)
+                            .background(Color.Black.copy(alpha = 0.45f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = if (uiState.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = if (uiState.isBookmarked) "Saved" else "Save Article",
+                            tint = if (uiState.isBookmarked) MaterialTheme.colorScheme.primary else Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
                     IconButton(
                         onClick = { /* Share Post */ },
                         modifier = Modifier
@@ -339,7 +354,7 @@ fun PostDetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
-                            Spacer(modifier = Modifier.width(20.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
 
                             Icon(
                                 imageVector = Icons.Default.ChatBubbleOutline,
@@ -351,6 +366,14 @@ fun PostDetailScreen(
                                 text = "${uiState.comments.size} comments",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        IconButton(onClick = { viewModel.onBookmarkClick() }) {
+                            Icon(
+                                imageVector = if (uiState.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                contentDescription = if (uiState.isBookmarked) "Saved" else "Save Article",
+                                tint = if (uiState.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }

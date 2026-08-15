@@ -169,7 +169,7 @@ fun FeedScreen(
             )
         },
         floatingActionButton = {
-            if (uiState.isAdmin) {
+            if (uiState.currentUserId != null) {
                 FloatingActionButton(
                     onClick = onNewPostClick,
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -326,7 +326,7 @@ fun FeedScreen(
                             onCommentClick = { onPostClick(post.id) },
                             onShareClick = { /* Share functionality */ },
                             onPostClick = { onPostClick(post.id) },
-                            canEdit = uiState.isAdmin && (post.authorId == uiState.currentUserId || uiState.isAdmin),
+                            canEdit = uiState.isAdmin || (uiState.currentUserId != null && post.authorId == uiState.currentUserId),
                             onEditClick = { onEditPostClick(post.id) }
                         )
                     }

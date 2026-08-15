@@ -7,6 +7,8 @@ import com.devjournal.data.model.Comment
 import com.devjournal.data.model.Post
 import com.devjournal.data.remote.NotifyWorkerApi
 import com.devjournal.domain.usecase.AddCommentUseCase
+import com.devjournal.domain.usecase.BookmarkPostUseCase
+import com.devjournal.domain.usecase.CheckIfBookmarkedUseCase
 import com.devjournal.domain.usecase.CheckIfLikedUseCase
 import com.devjournal.domain.usecase.GetCommentsUseCase
 import com.devjournal.domain.usecase.GetPostDetailUseCase
@@ -25,6 +27,7 @@ data class PostDetailUiState(
     val comments: List<Comment> = emptyList(),
     val isLoading: Boolean = true,
     val isLiked: Boolean = false,
+    val isBookmarked: Boolean = false,
     val currentUserId: String? = null,
     val commentInput: String = "",
     val isSubmittingComment: Boolean = false,
@@ -35,6 +38,8 @@ data class PostDetailUiState(
 class PostDetailViewModel @Inject constructor(
     private val getPostDetailUseCase: GetPostDetailUseCase,
     private val likePostUseCase: LikePostUseCase,
+    private val bookmarkPostUseCase: BookmarkPostUseCase,
+    private val checkIfBookmarkedUseCase: CheckIfBookmarkedUseCase,
     private val getCommentsUseCase: GetCommentsUseCase,
     private val addCommentUseCase: AddCommentUseCase,
     private val checkIfLikedUseCase: CheckIfLikedUseCase,
@@ -75,11 +80,18 @@ class PostDetailViewModel @Inject constructor(
             observeAuthStateUseCase().collect { user ->
                 _uiState.update { it.copy(currentUserId = user?.uid) }
                 if (user != null) {
-                    checkIfLikedUseCase(postId, user.uid).collect { liked ->
-                        _uiState.update { it.copy(isLiked = liked) }
+                    launch {
+                        checkIfLikedUseCase(postId, user.uid).collect { liked ->
+                            _uiState.update { it.copy(isLiked = liked) }
+                        }
+                    }
+                    launch {
+                        checkIfBookmarkedUseCase(postId, user.uid).collect { bookmarked ->
+                            _uiState.update { it.copy(isBookmarked = bookmarked) }
+                        }
                     }
                 } else {
-                    _uiState.update { it.copy(isLiked = false) }
+                    _uiState.update { it.copy(isLiked = false, isBookmarked = false) }
                 }
             }
         }
@@ -103,6 +115,19 @@ class PostDetailViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = "Failed to update like: ${e.message}") }
+            }
+        }
+    }
+
+    fun onBookmarkClick() {
+        val uid = _uiState.value.currentUserId ?: return
+        val alreadyBookmarked = _uiState.value.isBookmarked
+
+        viewModelScope.launch {
+            try {
+                bookmarkPostUseCase(postId, uid, alreadyBookmarked)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = "Failed to update bookmark: ${e.message}") }
             }
         }
     }
