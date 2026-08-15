@@ -8,8 +8,17 @@ interface PostRepository {
     fun getPostById(postId: String): Flow<Post?>
     fun isPostLiked(postId: String, uid: String): Flow<Boolean>
     fun getLikedPosts(uid: String): Flow<List<Post>>
+    fun observeLikedPostIds(uid: String): Flow<Set<String>>
+    
+    fun isPostBookmarked(postId: String, uid: String): Flow<Boolean>
+    fun getBookmarkedPosts(uid: String): Flow<List<Post>>
+    fun observeBookmarkedPostIds(uid: String): Flow<Set<String>>
+    
     suspend fun likePost(postId: String, uid: String)
     suspend fun unlikePost(postId: String, uid: String)
+    suspend fun bookmarkPost(postId: String, uid: String)
+    suspend fun unbookmarkPost(postId: String, uid: String)
+    
     suspend fun createPost(post: Post): Result<String>
     suspend fun updatePost(postId: String, post: Post): Result<Unit>
     suspend fun getDraftById(postId: String): Post?

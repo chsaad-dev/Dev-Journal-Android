@@ -64,9 +64,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.SnackbarHostState
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,7 +102,11 @@ fun FeedScreen(
         }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
     Scaffold(
+        snackbarHost = { androidx.compose.material3.SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -299,11 +306,22 @@ fun FeedScreen(
                         PostCard(
                             post = post,
                             isLiked = uiState.likedPostIds.contains(post.id),
+                            isBookmarked = uiState.bookmarkedPostIds.contains(post.id),
                             onLikeClick = {
-                                viewModel.onLikeClick(
-                                    postId = post.id,
-                                    alreadyLiked = uiState.likedPostIds.contains(post.id)
-                                )
+                                if (uiState.currentUserId == null) {
+                                    snackbarHostState.currentSnackbarData?.dismiss()
+                                    coroutineScope.launch { snackbarHostState.showSnackbar("Sign in to like articles") }
+                                } else {
+                                    viewModel.onLikeClick(post.id, uiState.likedPostIds.contains(post.id))
+                                }
+                            },
+                            onBookmarkClick = {
+                                if (uiState.currentUserId == null) {
+                                    snackbarHostState.currentSnackbarData?.dismiss()
+                                    coroutineScope.launch { snackbarHostState.showSnackbar("Sign in to save articles") }
+                                } else {
+                                    viewModel.onBookmarkClick(post.id, uiState.bookmarkedPostIds.contains(post.id))
+                                }
                             },
                             onCommentClick = { onPostClick(post.id) },
                             onShareClick = { /* Share functionality */ },

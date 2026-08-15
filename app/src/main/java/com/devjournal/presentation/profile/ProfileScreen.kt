@@ -46,6 +46,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -53,6 +55,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,12 +83,14 @@ fun ProfileScreen(
     val profile = uiState.profile
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            viewModel.onPhotoSelected(uri)
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            uri?.let { viewModel.onPhotoSelected(it) }
         }
-    }
+    )
+    
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Liked", "Saved")
 
     LaunchedEffect(uiState.isSignedOut) {
         if (uiState.isSignedOut) {
@@ -296,36 +303,46 @@ fun ProfileScreen(
                         }
 
                         Spacer(modifier = Modifier.height(20.dp))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Liked Posts Header
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        
+                        TabRow(
+                            selectedTabIndex = selectedTabIndex,
+                            containerColor = MaterialTheme.colorScheme.background,
+                            contentColor = MaterialTheme.colorScheme.primary
                         ) {
-                            Text(
-                                text = "Liked Posts (${uiState.likedPosts.size})",
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                            tabs.forEachIndexed { index, title ->
+                                Tab(
+                                    selected = selectedTabIndex == index,
+                                    onClick = { selectedTabIndex = index },
+                                    text = {
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                        )
+                                    }
+                                )
+                            }
                         }
 
-                        if (uiState.likedPosts.isEmpty()) {
-                            Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        val displayPosts = if (selectedTabIndex == 0) uiState.likedPosts else uiState.bookmarkedPosts
+
+                        if (displayPosts.isEmpty()) {
+                            val emptyText = if (selectedTabIndex == 0) "You haven't liked any articles yet." else "You haven't saved any articles yet."
                             Text(
-                                text = "You haven't liked any articles yet.",
+                                text = emptyText,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(vertical = 12.dp)
+                                modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp)
                             )
                         }
                     }
                 }
+                
+                val displayPosts = if (selectedTabIndex == 0) uiState.likedPosts else uiState.bookmarkedPosts
 
-                // Liked Posts 2-column Grid Items
-                items(uiState.likedPosts, key = { it.id }) { post ->
+                // Grid Items
+                items(displayPosts, key = { "post_${selectedTabIndex}_${it.id}" }) { post ->
                     CompactPostCard(post = post, onClick = { onPostClick(post.id) })
                 }
 

@@ -11,6 +11,7 @@ import com.devjournal.domain.usecase.GetUserProfileUseCase
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
 import com.devjournal.domain.usecase.SignOutUseCase
 import com.devjournal.domain.usecase.UpdateUserProfileUseCase
+import com.devjournal.domain.usecase.GetBookmarkedPostsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,7 @@ import javax.inject.Inject
 data class ProfileUiState(
     val profile: UserProfile? = null,
     val likedPosts: List<Post> = emptyList(),
+    val bookmarkedPosts: List<Post> = emptyList(),
     val isLoading: Boolean = true,
     val isEditing: Boolean = false,
     val editName: String = "",
@@ -36,6 +38,7 @@ class ProfileViewModel @Inject constructor(
     private val getUserProfileUseCase: GetUserProfileUseCase,
     private val updateUserProfileUseCase: UpdateUserProfileUseCase,
     private val getLikedPostsUseCase: GetLikedPostsUseCase,
+    private val getBookmarkedPostsUseCase: GetBookmarkedPostsUseCase,
     private val signOutUseCase: SignOutUseCase,
     private val cloudinaryUploader: CloudinaryUploader,
     private val observeAuthStateUseCase: ObserveAuthStateUseCase
@@ -80,8 +83,16 @@ class ProfileViewModel @Inject constructor(
                 )
             }
 
-            getLikedPostsUseCase(uid).collect { liked ->
-                _uiState.update { it.copy(likedPosts = liked) }
+            launch {
+                getLikedPostsUseCase(uid).collect { liked ->
+                    _uiState.update { it.copy(likedPosts = liked) }
+                }
+            }
+
+            launch {
+                getBookmarkedPostsUseCase(uid).collect { bookmarked ->
+                    _uiState.update { it.copy(bookmarkedPosts = bookmarked) }
+                }
             }
         }
     }

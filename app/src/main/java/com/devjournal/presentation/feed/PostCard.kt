@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
@@ -54,7 +56,9 @@ import java.util.Locale
 fun PostCard(
     post: Post,
     isLiked: Boolean,
+    isBookmarked: Boolean,
     onLikeClick: () -> Unit,
+    onBookmarkClick: () -> Unit,
     onCommentClick: () -> Unit,
     onShareClick: () -> Unit,
     onPostClick: () -> Unit,
@@ -247,13 +251,23 @@ fun PostCard(
                         )
                     }
 
-                    // Share Button
-                    IconButton(onClick = onShareClick) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    // Bookmark and Share Buttons
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onBookmarkClick) {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                contentDescription = if (isBookmarked) "Unbookmark" else "Bookmark",
+                                tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        
+                        IconButton(onClick = onShareClick) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

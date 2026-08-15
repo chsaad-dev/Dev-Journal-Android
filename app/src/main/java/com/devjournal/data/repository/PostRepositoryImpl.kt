@@ -87,6 +87,79 @@ class PostRepositoryImpl @Inject constructor(
         awaitClose { listener.remove() }
     }
 
+    override fun observeLikedPostIds(uid: String): Flow<Set<String>> = callbackFlow {
+        val listener = firestore.collection("users")
+            .document(uid)
+            .collection("likedPosts")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val ids = snapshot?.documents?.map { it.id }?.toSet() ?: emptySet()
+                trySend(ids)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    override fun isPostBookmarked(postId: String, uid: String): Flow<Boolean> = callbackFlow {
+        val listener = firestore.collection("users")
+            .document(uid)
+            .collection("bookmarks")
+            .document(postId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.exists() == true)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    override fun getBookmarkedPosts(uid: String): Flow<List<Post>> = callbackFlow {
+        val listener = firestore.collection("users")
+            .document(uid)
+            .collection("bookmarks")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val postIds = snapshot?.documents?.map { it.id } ?: emptyList()
+                if (postIds.isEmpty()) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                firestore.collection("posts")
+                    .whereIn(com.google.firebase.firestore.FieldPath.documentId(), postIds.take(30))
+                    .get()
+                    .addOnSuccessListener { postsSnapshot ->
+                        val posts = postsSnapshot.toObjects(Post::class.java)
+                        trySend(posts)
+                    }
+                    .addOnFailureListener { e ->
+                        close(e)
+                    }
+            }
+        awaitClose { listener.remove() }
+    }
+
+    override fun observeBookmarkedPostIds(uid: String): Flow<Set<String>> = callbackFlow {
+        val listener = firestore.collection("users")
+            .document(uid)
+            .collection("bookmarks")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val ids = snapshot?.documents?.map { it.id }?.toSet() ?: emptySet()
+                trySend(ids)
+            }
+        awaitClose { listener.remove() }
+    }
+
     override suspend fun likePost(postId: String, uid: String) {
         val postRef = firestore.collection("posts").document(postId)
         val likeRef = firestore.collection("users").document(uid)
@@ -113,6 +186,18 @@ class PostRepositoryImpl @Inject constructor(
                 transaction.update(postRef, "likeCount", FieldValue.increment(-1))
             }
         }.await()
+    }
+
+    override suspend fun bookmarkPost(postId: String, uid: String) {
+        val bookmarkRef = firestore.collection("users").document(uid)
+            .collection("bookmarks").document(postId)
+        bookmarkRef.set(mapOf("bookmarkedAt" to FieldValue.serverTimestamp())).await()
+    }
+
+    override suspend fun unbookmarkPost(postId: String, uid: String) {
+        val bookmarkRef = firestore.collection("users").document(uid)
+            .collection("bookmarks").document(postId)
+        bookmarkRef.delete().await()
     }
 
     override suspend fun createPost(post: Post): Result<String> = try {

@@ -7,12 +7,16 @@ import com.devjournal.domain.usecase.GetPostsUseCase
 import com.devjournal.domain.usecase.GetUserProfileUseCase
 import com.devjournal.domain.usecase.LikePostUseCase
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
+import com.devjournal.domain.usecase.BookmarkPostUseCase
+import com.devjournal.domain.usecase.ObserveLikedPostIdsUseCase
+import com.devjournal.domain.usecase.ObserveBookmarkedPostIdsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import javax.inject.Inject
 
 data class FeedUiState(
@@ -24,19 +28,24 @@ data class FeedUiState(
     val isAdmin: Boolean = false,
     val currentUserId: String? = null,
     val currentUserPhotoUrl: String? = null,
-    val likedPostIds: Set<String> = emptySet()
+    val likedPostIds: Set<String> = emptySet(),
+    val bookmarkedPostIds: Set<String> = emptySet()
 )
 
 @HiltViewModel
 class FeedViewModel @Inject constructor(
     private val getPostsUseCase: GetPostsUseCase,
     private val likePostUseCase: LikePostUseCase,
+    private val bookmarkPostUseCase: BookmarkPostUseCase,
     private val observeAuthStateUseCase: ObserveAuthStateUseCase,
-    private val getUserProfileUseCase: GetUserProfileUseCase
+    private val getUserProfileUseCase: GetUserProfileUseCase,
+    private val observeLikedPostIdsUseCase: ObserveLikedPostIdsUseCase,
+    private val observeBookmarkedPostIdsUseCase: ObserveBookmarkedPostIdsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FeedUiState())
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
+    private var interactionsJob: Job? = null
 
     init {
         observeCurrentUser()
@@ -55,14 +64,34 @@ class FeedViewModel @Inject constructor(
                             isAdmin = profile?.role.equals("admin", ignoreCase = true)
                         )
                     }
+                    observeInteractions(user.uid)
                 } else {
+                    interactionsJob?.cancel()
                     _uiState.update {
                         it.copy(
                             currentUserId = null,
                             currentUserPhotoUrl = null,
-                            isAdmin = false
+                            isAdmin = false,
+                            likedPostIds = emptySet(),
+                            bookmarkedPostIds = emptySet()
                         )
                     }
+                }
+            }
+        }
+    }
+
+    private fun observeInteractions(uid: String) {
+        interactionsJob?.cancel()
+        interactionsJob = viewModelScope.launch {
+            launch {
+                observeLikedPostIdsUseCase(uid).collect { likedIds ->
+                    _uiState.update { it.copy(likedPostIds = likedIds) }
+                }
+            }
+            launch {
+                observeBookmarkedPostIdsUseCase(uid).collect { bookmarkedIds ->
+                    _uiState.update { it.copy(bookmarkedPostIds = bookmarkedIds) }
                 }
             }
         }
@@ -116,6 +145,34 @@ class FeedViewModel @Inject constructor(
                         state.likedPostIds - postId
                     }
                     state.copy(likedPostIds = reverted)
+                }
+            }
+        }
+    }
+
+    fun onBookmarkClick(postId: String, alreadyBookmarked: Boolean) {
+        val uid = _uiState.value.currentUserId ?: return
+        viewModelScope.launch {
+            // Optimistic update
+            _uiState.update { state ->
+                val newBookmarks = if (alreadyBookmarked) {
+                    state.bookmarkedPostIds - postId
+                } else {
+                    state.bookmarkedPostIds + postId
+                }
+                state.copy(bookmarkedPostIds = newBookmarks)
+            }
+            try {
+                bookmarkPostUseCase(postId, uid, alreadyBookmarked)
+            } catch (_: Exception) {
+                // Revert on error
+                _uiState.update { state ->
+                    val reverted = if (alreadyBookmarked) {
+                        state.bookmarkedPostIds + postId
+                    } else {
+                        state.bookmarkedPostIds - postId
+                    }
+                    state.copy(bookmarkedPostIds = reverted)
                 }
             }
         }
