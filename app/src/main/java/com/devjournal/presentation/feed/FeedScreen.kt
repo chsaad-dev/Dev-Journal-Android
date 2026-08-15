@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -22,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.DynamicFeed
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
@@ -74,7 +76,8 @@ fun FeedScreen(
     onProfileClick: () -> Unit,
     onNewPostClick: () -> Unit,
     onEditPostClick: (String) -> Unit = {},
-    onNotificationsClick: () -> Unit = {}
+    onNotificationsClick: () -> Unit = {},
+    onSearchClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedNavIndex by remember { mutableIntStateOf(0) }
@@ -119,6 +122,14 @@ fun FeedScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { onSearchClick() }) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
                             .padding(end = 12.dp)

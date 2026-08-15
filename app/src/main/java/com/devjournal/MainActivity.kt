@@ -20,6 +20,7 @@ import com.devjournal.presentation.feed.FeedScreen
 import com.devjournal.presentation.notifications.NotificationsScreen
 import com.devjournal.presentation.postdetail.PostDetailScreen
 import com.devjournal.presentation.profile.ProfileScreen
+import com.devjournal.presentation.search.SearchScreen
 import com.devjournal.ui.theme.DevJournalTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -81,6 +82,9 @@ class MainActivity : ComponentActivity() {
                             },
                             onNotificationsClick = {
                                 navController.navigate("notifications")
+                            },
+                            onSearchClick = {
+                                navController.navigate("search")
                             }
                         )
                     }
@@ -113,6 +117,16 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("notifications") {
                         NotificationsScreen(
+                            onBackClick = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+                    composable("search") {
+                        SearchScreen(
+                            onPostClick = { postId ->
+                                navController.navigate("postdetail/$postId")
+                            },
                             onBackClick = {
                                 navController.popBackStack()
                             }
