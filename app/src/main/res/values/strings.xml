@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">Dev Journal</string>
+    <!-- Replace this with your Web Client ID from Firebase Console / Google Cloud Console -->
+    <string name="google_web_client_id">YOUR_GOOGLE_WEB_CLIENT_ID.apps.googleusercontent.com</string>
     <string name="action_settings">Settings</string>
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
