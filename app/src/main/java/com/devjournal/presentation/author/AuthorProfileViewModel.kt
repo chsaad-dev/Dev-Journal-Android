@@ -37,7 +37,6 @@ data class AuthorProfileUiState(
 
 @HiltViewModel
 class AuthorProfileViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
     private val getUserProfileUseCase: GetUserProfileUseCase,
     private val getPostsByAuthorUseCase: GetPostsByAuthorUseCase,
     private val observeAuthStateUseCase: ObserveAuthStateUseCase,
@@ -45,7 +44,8 @@ class AuthorProfileViewModel @Inject constructor(
     private val observeBookmarkedPostIdsUseCase: ObserveBookmarkedPostIdsUseCase,
     private val likePostUseCase: LikePostUseCase,
     private val bookmarkPostUseCase: BookmarkPostUseCase,
-    private val deletePostUseCase: DeletePostUseCase
+    private val deletePostUseCase: DeletePostUseCase,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     val authorId: String = checkNotNull(savedStateHandle["authorId"])
