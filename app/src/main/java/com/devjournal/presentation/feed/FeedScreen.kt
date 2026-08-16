@@ -84,7 +84,8 @@ fun FeedScreen(
     onNewPostClick: () -> Unit,
     onEditPostClick: (String) -> Unit = {},
     onNotificationsClick: () -> Unit = {},
-    onSearchClick: () -> Unit = {}
+    onSearchClick: () -> Unit = {},
+    onAuthorClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedNavIndex by remember { mutableIntStateOf(0) }
@@ -360,7 +361,8 @@ fun FeedScreen(
                             canEdit = uiState.currentUserId != null && post.authorId == uiState.currentUserId,
                             canDelete = uiState.isAdmin || (uiState.currentUserId != null && post.authorId == uiState.currentUserId),
                             onEditClick = { onEditPostClick(post.id) },
-                            onDeleteClick = { postToDeleteId = post.id }
+                            onDeleteClick = { postToDeleteId = post.id },
+                            onAuthorClick = onAuthorClick
                         )
                     }
                 }

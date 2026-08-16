@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.devjournal.presentation.auth.LoginScreen
+import com.devjournal.presentation.author.AuthorProfileScreen
 import com.devjournal.presentation.editor.PostEditorScreen
 import com.devjournal.presentation.feed.FeedScreen
 import com.devjournal.presentation.notifications.NotificationsScreen
@@ -91,6 +92,9 @@ class MainActivity : ComponentActivity() {
                             },
                             onSearchClick = {
                                 navController.navigate("search")
+                            },
+                            onAuthorClick = { authorId ->
+                                navController.navigate("author/$authorId")
                             }
                         )
                     }
@@ -101,6 +105,22 @@ class MainActivity : ComponentActivity() {
                         val postId = backStackEntry.arguments?.getString("postId") ?: ""
                         PostDetailScreen(
                             postId = postId,
+                            onAuthorClick = { authorId ->
+                                navController.navigate("author/$authorId")
+                            },
+                            onBackClick = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+                    composable(
+                        route = "author/{authorId}",
+                        arguments = listOf(navArgument("authorId") { type = NavType.StringType })
+                    ) {
+                        AuthorProfileScreen(
+                            onPostClick = { postId ->
+                                navController.navigate("postdetail/$postId")
+                            },
                             onBackClick = {
                                 navController.popBackStack()
                             }

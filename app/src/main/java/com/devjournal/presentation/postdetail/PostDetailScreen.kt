@@ -79,6 +79,7 @@ import java.util.Locale
 fun PostDetailScreen(
     postId: String,
     viewModel: PostDetailViewModel = hiltViewModel(),
+    onAuthorClick: (String) -> Unit = {},
     onBackClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -356,7 +357,16 @@ fun PostDetailScreen(
 
                     // Author Row
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (post.authorId.isNotBlank()) {
+                                    Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .clickable { onAuthorClick(post.authorId) }
+                                        .padding(vertical = 4.dp, horizontal = 2.dp)
+                                } else Modifier
+                            ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(

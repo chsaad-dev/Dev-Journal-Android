@@ -60,9 +60,10 @@ fun PostCard(
     isBookmarked: Boolean,
     onLikeClick: () -> Unit,
     onBookmarkClick: () -> Unit,
-    onCommentClick: () -> Unit,
-    onShareClick: () -> Unit,
     onPostClick: () -> Unit,
+    onCommentClick: () -> Unit = {},
+    onShareClick: () -> Unit = {},
+    onAuthorClick: ((String) -> Unit)? = null,
     canEdit: Boolean = false,
     canDelete: Boolean = false,
     onEditClick: (() -> Unit)? = null,
@@ -126,34 +127,48 @@ fun PostCard(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
+                    Row(
                         modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
+                            .weight(1f)
+                            .then(
+                                if (onAuthorClick != null && post.authorId.isNotBlank()) {
+                                    Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { onAuthorClick(post.authorId) }
+                                        .padding(vertical = 2.dp, horizontal = 2.dp)
+                                } else Modifier
+                            ),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Author Avatar",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(36.dp)
-                        )
-                    }
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AccountCircle,
+                                contentDescription = "Author Avatar",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (post.authorId.isNotBlank()) "Author: ${post.authorId.take(8)}" else "DevJournal Author",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = formatTimestamp(post.createdAt?.toDate()?.time),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column {
+                            Text(
+                                text = if (post.authorId.isNotBlank()) "Author: ${post.authorId.take(8)}" else "DevJournal Author",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = formatTimestamp(post.createdAt?.toDate()?.time),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                         if (canEdit || canDelete) {

@@ -31,6 +31,23 @@ class PostRepositoryImpl @Inject constructor(
         awaitClose { listener.remove() }
     }
 
+    override fun getPostsByAuthor(authorId: String): Flow<List<Post>> = callbackFlow {
+        val listener = firestore.collection("posts")
+            .whereEqualTo("authorId", authorId)
+            .whereEqualTo("published", true)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    close()
+                    return@addSnapshotListener
+                }
+                val posts = snapshot?.toObjects(Post::class.java) ?: emptyList()
+                trySend(posts)
+            }
+        awaitClose { listener.remove() }
+    }
+
     override fun getPostById(postId: String): Flow<Post?> = callbackFlow {
         val listener = firestore.collection("posts")
             .document(postId)
