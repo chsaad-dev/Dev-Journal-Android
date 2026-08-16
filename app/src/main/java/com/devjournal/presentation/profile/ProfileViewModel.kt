@@ -13,9 +13,11 @@ import com.devjournal.domain.usecase.SignOutUseCase
 import com.devjournal.domain.usecase.UpdateUserProfileUseCase
 import com.devjournal.domain.usecase.GetBookmarkedPostsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -47,6 +49,8 @@ class ProfileViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
+    private var profileJob: kotlinx.coroutines.Job? = null
+
     init {
         observeCurrentUser()
     }
@@ -55,7 +59,16 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             observeAuthStateUseCase().collect { user ->
                 if (user == null) {
-                    _uiState.update { it.copy(isSignedOut = true, isLoading = false) }
+                    profileJob?.cancel()
+                    _uiState.update {
+                        it.copy(
+                            isSignedOut = true,
+                            isLoading = false,
+                            likedPosts = emptyList(),
+                            bookmarkedPosts = emptyList(),
+                            profile = null
+                        )
+                    }
                 } else {
                     _uiState.update { it.copy(isSignedOut = false) }
                     loadProfileAndLikedPosts(user.uid, user.email, user.displayName, user.photoUrl?.toString())
@@ -65,7 +78,8 @@ class ProfileViewModel @Inject constructor(
     }
 
     private fun loadProfileAndLikedPosts(uid: String, email: String?, displayName: String?, photoUrl: String?) {
-        viewModelScope.launch {
+        profileJob?.cancel()
+        profileJob = viewModelScope.launch {
             val existingProfile = getUserProfileUseCase(uid) ?: UserProfile(
                 uid = uid,
                 email = email ?: "",
@@ -84,15 +98,19 @@ class ProfileViewModel @Inject constructor(
             }
 
             launch {
-                getLikedPostsUseCase(uid).collect { liked ->
-                    _uiState.update { it.copy(likedPosts = liked) }
-                }
+                getLikedPostsUseCase(uid)
+                    .catch { /* ignore on signout */ }
+                    .collect { liked ->
+                        _uiState.update { it.copy(likedPosts = liked) }
+                    }
             }
 
             launch {
-                getBookmarkedPostsUseCase(uid).collect { bookmarked ->
-                    _uiState.update { it.copy(bookmarkedPosts = bookmarked) }
-                }
+                getBookmarkedPostsUseCase(uid)
+                    .catch { /* ignore on signout */ }
+                    .collect { bookmarked ->
+                        _uiState.update { it.copy(bookmarkedPosts = bookmarked) }
+                    }
             }
         }
     }
@@ -121,15 +139,15 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun onNameChange(text: String) {
-        _uiState.update { it.copy(editName = text, errorMessage = null) }
+    fun onNameChange(name: String) {
+        _uiState.update { it.copy(editName = name) }
     }
 
-    fun onBioChange(text: String) {
-        _uiState.update { it.copy(editBio = text, errorMessage = null) }
+    fun onBioChange(bio: String) {
+        _uiState.update { it.copy(editBio = bio) }
     }
 
-    fun onSaveClick() {
+    fun onSaveProfileClick() {
         val currentProfile = _uiState.value.profile ?: return
         val newName = _uiState.value.editName.trim()
         val newBio = _uiState.value.editBio.trim()
@@ -140,18 +158,24 @@ class ProfileViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             val updated = currentProfile.copy(name = newName, bio = newBio)
-            try {
-                updateUserProfileUseCase(updated)
+            val result = updateUserProfileUseCase(updated)
+            result.onSuccess {
                 _uiState.update {
                     it.copy(
                         profile = updated,
                         isEditing = false,
-                        errorMessage = null
+                        isSaving = false
                     )
                 }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(errorMessage = "Failed to update profile: ${e.message}") }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isSaving = false,
+                        errorMessage = "Failed to update profile: ${error.localizedMessage}"
+                    )
+                }
             }
         }
     }
@@ -160,9 +184,9 @@ class ProfileViewModel @Inject constructor(
         val currentProfile = _uiState.value.profile ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isUploadingPhoto = true, errorMessage = null) }
-            val uploadResult = cloudinaryUploader.uploadImage(uri)
-            uploadResult.onSuccess { secureUrl ->
-                val updated = currentProfile.copy(photoUrl = secureUrl)
+            val result = cloudinaryUploader.uploadImage(uri)
+            result.onSuccess { photoUrl ->
+                val updated = currentProfile.copy(photoUrl = photoUrl)
                 updateUserProfileUseCase(updated)
                 _uiState.update {
                     it.copy(
@@ -182,6 +206,7 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun onSignOutClick() {
+        profileJob?.cancel()
         signOutUseCase()
         _uiState.update { it.copy(isSignedOut = true) }
     }

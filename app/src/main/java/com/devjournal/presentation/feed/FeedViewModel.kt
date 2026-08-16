@@ -15,6 +15,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
@@ -87,14 +88,18 @@ class FeedViewModel @Inject constructor(
         interactionsJob?.cancel()
         interactionsJob = viewModelScope.launch {
             launch {
-                observeLikedPostIdsUseCase(uid).collect { likedIds ->
-                    _uiState.update { it.copy(likedPostIds = likedIds) }
-                }
+                observeLikedPostIdsUseCase(uid)
+                    .catch { /* ignore on signout */ }
+                    .collect { likedIds ->
+                        _uiState.update { it.copy(likedPostIds = likedIds) }
+                    }
             }
             launch {
-                observeBookmarkedPostIdsUseCase(uid).collect { bookmarkedIds ->
-                    _uiState.update { it.copy(bookmarkedPostIds = bookmarkedIds) }
-                }
+                observeBookmarkedPostIdsUseCase(uid)
+                    .catch { /* ignore on signout */ }
+                    .collect { bookmarkedIds ->
+                        _uiState.update { it.copy(bookmarkedPostIds = bookmarkedIds) }
+                    }
             }
         }
     }

@@ -21,6 +21,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -94,14 +95,18 @@ class PostDetailViewModel @Inject constructor(
                         _uiState.update { it.copy(isAdmin = profile?.role.equals("admin", ignoreCase = true)) }
                     }
                     launch {
-                        checkIfLikedUseCase(postId, user.uid).collect { liked ->
-                            _uiState.update { it.copy(isLiked = liked) }
-                        }
+                        checkIfLikedUseCase(postId, user.uid)
+                            .catch { /* ignore on signout */ }
+                            .collect { liked ->
+                                _uiState.update { it.copy(isLiked = liked) }
+                            }
                     }
                     launch {
-                        checkIfBookmarkedUseCase(postId, user.uid).collect { bookmarked ->
-                            _uiState.update { it.copy(isBookmarked = bookmarked) }
-                        }
+                        checkIfBookmarkedUseCase(postId, user.uid)
+                            .catch { /* ignore on signout */ }
+                            .collect { bookmarked ->
+                                _uiState.update { it.copy(isBookmarked = bookmarked) }
+                            }
                     }
                 } else {
                     _uiState.update { it.copy(isLiked = false, isBookmarked = false, isAdmin = false) }

@@ -22,7 +22,8 @@ class CommentRepositoryImpl @Inject constructor(
             .orderBy("createdAt", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(emptyList())
+                    close()
                     return@addSnapshotListener
                 }
                 val comments = snapshot?.toObjects(Comment::class.java) ?: emptyList()

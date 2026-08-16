@@ -21,7 +21,8 @@ class PostRepositoryImpl @Inject constructor(
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(emptyList())
+                    close()
                     return@addSnapshotListener
                 }
                 val posts = snapshot?.toObjects(Post::class.java) ?: emptyList()
@@ -35,7 +36,8 @@ class PostRepositoryImpl @Inject constructor(
             .document(postId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(null)
+                    close()
                     return@addSnapshotListener
                 }
                 val post = snapshot?.toObject(Post::class.java)
@@ -51,7 +53,8 @@ class PostRepositoryImpl @Inject constructor(
             .document(postId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(false)
+                    close()
                     return@addSnapshotListener
                 }
                 trySend(snapshot?.exists() == true)
@@ -65,7 +68,8 @@ class PostRepositoryImpl @Inject constructor(
             .collection("likedPosts")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(emptyList())
+                    close()
                     return@addSnapshotListener
                 }
                 val postIds = snapshot?.documents?.map { it.id } ?: emptyList()
@@ -80,8 +84,9 @@ class PostRepositoryImpl @Inject constructor(
                         val posts = postsSnapshot.toObjects(Post::class.java)
                         trySend(posts)
                     }
-                    .addOnFailureListener { e ->
-                        close(e)
+                    .addOnFailureListener {
+                        trySend(emptyList())
+                        close()
                     }
             }
         awaitClose { listener.remove() }
@@ -93,7 +98,8 @@ class PostRepositoryImpl @Inject constructor(
             .collection("likedPosts")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(emptySet())
+                    close()
                     return@addSnapshotListener
                 }
                 val ids = snapshot?.documents?.map { it.id }?.toSet() ?: emptySet()
@@ -109,7 +115,8 @@ class PostRepositoryImpl @Inject constructor(
             .document(postId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(false)
+                    close()
                     return@addSnapshotListener
                 }
                 trySend(snapshot?.exists() == true)
@@ -123,7 +130,8 @@ class PostRepositoryImpl @Inject constructor(
             .collection("bookmarks")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(emptyList())
+                    close()
                     return@addSnapshotListener
                 }
                 val postIds = snapshot?.documents?.map { it.id } ?: emptyList()
@@ -138,8 +146,9 @@ class PostRepositoryImpl @Inject constructor(
                         val posts = postsSnapshot.toObjects(Post::class.java)
                         trySend(posts)
                     }
-                    .addOnFailureListener { e ->
-                        close(e)
+                    .addOnFailureListener {
+                        trySend(emptyList())
+                        close()
                     }
             }
         awaitClose { listener.remove() }
@@ -151,7 +160,8 @@ class PostRepositoryImpl @Inject constructor(
             .collection("bookmarks")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(emptySet())
+                    close()
                     return@addSnapshotListener
                 }
                 val ids = snapshot?.documents?.map { it.id }?.toSet() ?: emptySet()
