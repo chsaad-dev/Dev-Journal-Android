@@ -147,7 +147,7 @@ class ProfileViewModel @Inject constructor(
         _uiState.update { it.copy(editBio = bio) }
     }
 
-    fun onSaveProfileClick() {
+    fun onSaveClick() {
         val currentProfile = _uiState.value.profile ?: return
         val newName = _uiState.value.editName.trim()
         val newBio = _uiState.value.editBio.trim()
@@ -158,23 +158,19 @@ class ProfileViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             val updated = currentProfile.copy(name = newName, bio = newBio)
-            val result = updateUserProfileUseCase(updated)
-            result.onSuccess {
+            try {
+                updateUserProfileUseCase(updated)
                 _uiState.update {
                     it.copy(
                         profile = updated,
                         isEditing = false,
-                        isSaving = false
+                        errorMessage = null
                     )
                 }
-            }.onFailure { error ->
+            } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(
-                        isSaving = false,
-                        errorMessage = "Failed to update profile: ${error.localizedMessage}"
-                    )
+                    it.copy(errorMessage = "Failed to update profile: ${e.localizedMessage}")
                 }
             }
         }
