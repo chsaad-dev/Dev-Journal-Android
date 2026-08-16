@@ -228,7 +228,7 @@ fun AuthorProfileScreen(
 private fun AuthorHeaderCard(
     author: com.devjournal.data.model.UserProfile?,
     totalArticles: Int,
-    totalLikes: Long
+    totalLikes: Int
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),

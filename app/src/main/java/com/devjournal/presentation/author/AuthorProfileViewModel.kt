@@ -26,7 +26,7 @@ import javax.inject.Inject
 data class AuthorProfileUiState(
     val authorProfile: UserProfile? = null,
     val posts: List<Post> = emptyList(),
-    val totalLikes: Long = 0L,
+    val totalLikes: Int = 0,
     val isLoading: Boolean = true,
     val currentUserId: String? = null,
     val isAdmin: Boolean = false,
