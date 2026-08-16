@@ -6,6 +6,7 @@ import com.devjournal.domain.repository.AuthRepository
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
 import com.devjournal.domain.usecase.RegisterFcmTokenUseCase
 import com.devjournal.domain.usecase.ResendVerificationEmailUseCase
+import com.devjournal.domain.usecase.SendPasswordResetEmailUseCase
 import com.devjournal.domain.usecase.SignInUseCase
 import com.devjournal.domain.usecase.SignInWithGoogleUseCase
 import com.devjournal.domain.usecase.SignUpUseCase
@@ -21,6 +22,7 @@ import javax.inject.Inject
 
 data class AuthUiState(
     val isLoading: Boolean = false,
+    val isResettingPassword: Boolean = false,
     val errorMessage: String? = null,
     val successMessage: String? = null,
     val showResendButton: Boolean = false,
@@ -36,6 +38,7 @@ class AuthViewModel @Inject constructor(
     private val observeAuthStateUseCase: ObserveAuthStateUseCase,
     private val registerFcmTokenUseCase: RegisterFcmTokenUseCase,
     private val resendVerificationEmailUseCase: ResendVerificationEmailUseCase,
+    private val sendPasswordResetEmailUseCase: SendPasswordResetEmailUseCase,
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
@@ -48,6 +51,9 @@ class AuthViewModel @Inject constructor(
     private val _password = MutableStateFlow("")
     val password: StateFlow<String> = _password.asStateFlow()
 
+    private val _confirmPassword = MutableStateFlow("")
+    val confirmPassword: StateFlow<String> = _confirmPassword.asStateFlow()
+
     init {
         viewModelScope.launch {
             observeAuthStateUseCase().collect { user ->
@@ -58,6 +64,8 @@ class AuthViewModel @Inject constructor(
                     } else {
                         _uiState.update { it.copy(isAuthenticated = false, isLoading = false) }
                     }
+                } else {
+                    _uiState.update { it.copy(isAuthenticated = false, isLoading = false) }
                 }
             }
         }
@@ -73,15 +81,26 @@ class AuthViewModel @Inject constructor(
         _uiState.update { it.copy(errorMessage = null, successMessage = null) }
     }
 
-    fun toggleMode() {
+    fun onConfirmPasswordChange(newConfirmPassword: String) {
+        _confirmPassword.value = newConfirmPassword
+        _uiState.update { it.copy(errorMessage = null, successMessage = null) }
+    }
+
+    fun setSignUpMode(isSignUp: Boolean) {
         _uiState.update {
             it.copy(
-                isSignUpMode = !it.isSignUpMode,
+                isSignUpMode = isSignUp,
                 errorMessage = null,
                 successMessage = null,
                 showResendButton = false
             )
         }
+        _password.value = ""
+        _confirmPassword.value = ""
+    }
+
+    fun toggleMode() {
+        setSignUpMode(!_uiState.value.isSignUpMode)
     }
 
     fun onSignInClick(email: String, password: String) {
@@ -109,13 +128,17 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun onSignUpClick(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Email and password cannot be empty") }
+    fun onSignUpClick(email: String, password: String, confirmPassword: String) {
+        if (email.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "All fields are required") }
             return
         }
         if (password.length < 6) {
             _uiState.update { it.copy(errorMessage = "Password must be at least 6 characters") }
+            return
+        }
+        if (password != confirmPassword) {
+            _uiState.update { it.copy(errorMessage = "Passwords do not match") }
             return
         }
         viewModelScope.launch {
@@ -127,12 +150,43 @@ class AuthViewModel @Inject constructor(
                         isLoading = false,
                         isAuthenticated = false,
                         isSignUpMode = false,
-                        successMessage = "Account created! A verification link has been sent to ${email.trim()}. Please verify your email before signing in.",
+                        successMessage = "Account created! A verification link has been sent to ${email.trim()}. Please verify your email before logging in.",
                         showResendButton = true
                     )
                 }
+                _password.value = ""
+                _confirmPassword.value = ""
             }.onFailure { error ->
                 _uiState.update { it.copy(isLoading = false, errorMessage = error.localizedMessage ?: "Sign up failed") }
+            }
+        }
+    }
+
+    fun onForgotPasswordClick(email: String, onSent: () -> Unit = {}) {
+        val targetEmail = email.trim()
+        if (targetEmail.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Please enter your email address to reset password.") }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isResettingPassword = true, errorMessage = null, successMessage = null) }
+            val result = sendPasswordResetEmailUseCase(targetEmail)
+            result.onSuccess {
+                _uiState.update {
+                    it.copy(
+                        isResettingPassword = false,
+                        successMessage = "Password reset link sent to $targetEmail. Please check your inbox.",
+                        errorMessage = null
+                    )
+                }
+                onSent()
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isResettingPassword = false,
+                        errorMessage = error.localizedMessage ?: "Failed to send reset email"
+                    )
+                }
             }
         }
     }

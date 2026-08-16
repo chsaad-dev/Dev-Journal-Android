@@ -113,7 +113,7 @@ class MainActivity : ComponentActivity() {
                             },
                             onSignedOut = {
                                 navController.navigate("login") {
-                                    popUpTo("feed") { inclusive = true }
+                                    popUpTo(navController.graph.id) { inclusive = true }
                                 }
                             },
                             onBackClick = {

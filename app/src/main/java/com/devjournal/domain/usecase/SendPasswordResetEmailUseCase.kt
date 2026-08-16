@@ -1,0 +1,12 @@
+package com.devjournal.domain.usecase
+
+import com.devjournal.domain.repository.AuthRepository
+import javax.inject.Inject
+
+class SendPasswordResetEmailUseCase @Inject constructor(
+    private val authRepository: AuthRepository
+) {
+    suspend operator fun invoke(email: String): Result<Unit> {
+        return authRepository.sendPasswordResetEmail(email)
+    }
+}

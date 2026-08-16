@@ -1,5 +1,16 @@
 package com.devjournal.presentation.auth
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,15 +24,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,17 +61,25 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.collectAsState
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -75,9 +100,15 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
     val email by viewModel.email.collectAsState()
     val password by viewModel.password.collectAsState()
+    val confirmPassword by viewModel.confirmPassword.collectAsState()
 
     var isPasswordVisible by remember { mutableStateOf(false) }
+    var isConfirmPasswordVisible by remember { mutableStateOf(false) }
+    var showForgotPasswordDialog by remember { mutableStateOf(false) }
+    var forgotPasswordEmail by remember { mutableStateOf("") }
+
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
     val webClientId = stringResource(id = R.string.google_web_client_id)
 
@@ -87,9 +118,85 @@ fun LoginScreen(
         }
     }
 
+    // Forgot Password Dialog
+    if (showForgotPasswordDialog) {
+        AlertDialog(
+            onDismissRequest = { showForgotPasswordDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Reset Password", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Enter your registered email address and we'll send you a password recovery link.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = forgotPasswordEmail,
+                        onValueChange = { forgotPasswordEmail = it },
+                        label = { Text("Email Address") },
+                        leadingIcon = {
+                            Icon(Icons.Default.Email, contentDescription = null)
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                viewModel.onForgotPasswordClick(forgotPasswordEmail) {
+                                    showForgotPasswordDialog = false
+                                }
+                            }
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.onForgotPasswordClick(forgotPasswordEmail) {
+                            showForgotPasswordDialog = false
+                        }
+                    },
+                    enabled = forgotPasswordEmail.isNotBlank() && !uiState.isResettingPassword,
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    if (uiState.isResettingPassword) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Send Link")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showForgotPasswordDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = Color(0xFF070B14)
     ) {
         Box(
             modifier = Modifier
@@ -105,25 +212,136 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Wordmark Header
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Developer Logo & Code Brand
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(Color(0xFF4F46E5), Color(0xFF4CD7F6))
+                            )
+                        )
+                        .border(1.dp, Color(0xFFC3C0FF).copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Terminal,
+                        contentDescription = "DevJournal Logo",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
                 Text(
-                    text = "DevJournal",
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    ),
-                    color = MaterialTheme.colorScheme.primary
+                    text = buildAnnotatedString {
+                        withStyle(SpanStyle(color = Color(0xFF4CD7F6), fontWeight = FontWeight.Bold)) {
+                            append("<")
+                        }
+                        withStyle(SpanStyle(color = Color.White, fontWeight = FontWeight.ExtraBold)) {
+                            append("Dev")
+                        }
+                        withStyle(SpanStyle(color = Color(0xFFC3C0FF), fontWeight = FontWeight.ExtraBold)) {
+                            append("Journal")
+                        }
+                        withStyle(SpanStyle(color = Color(0xFF4CD7F6), fontWeight = FontWeight.Bold)) {
+                            append(" />")
+                        }
+                    },
+                    fontSize = 28.sp,
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 1.sp
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = if (uiState.isSignUpMode) "Create your developer account" else "Welcome back, developer",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = if (uiState.isSignUpMode)
+                        "Create your developer account"
+                    else
+                        "Welcome back, engineer",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF94A3B8)
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Segmented Switcher Tab
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp)),
+                    color = Color(0xFF0F172A),
+                    border = BorderStroke(1.dp, Color(0xFF1E293B))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(4.dp)
+                    ) {
+                        val signInBg by animateColorAsState(
+                            targetValue = if (!uiState.isSignUpMode) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                            animationSpec = tween(250),
+                            label = "signInTabBg"
+                        )
+                        val signInTextColor by animateColorAsState(
+                            targetValue = if (!uiState.isSignUpMode) MaterialTheme.colorScheme.onPrimaryContainer else Color(0xFF94A3B8),
+                            animationSpec = tween(250),
+                            label = "signInTabText"
+                        )
+
+                        val signUpBg by animateColorAsState(
+                            targetValue = if (uiState.isSignUpMode) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                            animationSpec = tween(250),
+                            label = "signUpTabBg"
+                        )
+                        val signUpTextColor by animateColorAsState(
+                            targetValue = if (uiState.isSignUpMode) MaterialTheme.colorScheme.onPrimaryContainer else Color(0xFF94A3B8),
+                            animationSpec = tween(250),
+                            label = "signUpTabText"
+                        )
+
+                        // Sign In Tab
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(signInBg)
+                                .clickable { viewModel.setSignUpMode(false) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Sign In",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                                color = signInTextColor
+                            )
+                        }
+
+                        // Sign Up Tab
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(signUpBg)
+                                .clickable { viewModel.setSignUpMode(true) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Create Account",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                                color = signUpTextColor
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
 
                 // Email field
                 OutlinedTextField(
@@ -142,21 +360,24 @@ fun LoginScreen(
                         keyboardType = KeyboardType.Email,
                         imeAction = ImeAction.Next
                     ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                    ),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                     )
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Password field
                 OutlinedTextField(
                     value = password,
                     onValueChange = { viewModel.onPasswordChange(it) },
-                    label = { Text("Password") },
+                    label = { Text(if (uiState.isSignUpMode) "Password (min. 6 characters)" else "Password") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Lock,
@@ -177,13 +398,13 @@ fun LoginScreen(
                     visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Password,
-                        imeAction = ImeAction.Done
+                        imeAction = if (uiState.isSignUpMode) ImeAction.Next else ImeAction.Done
                     ),
                     keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(FocusDirection.Down) },
                         onDone = {
-                            if (uiState.isSignUpMode) {
-                                viewModel.onSignUpClick(email, password)
-                            } else {
+                            focusManager.clearFocus()
+                            if (!uiState.isSignUpMode) {
                                 viewModel.onSignInClick(email, password)
                             }
                         }
@@ -192,13 +413,109 @@ fun LoginScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                     )
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                // Confirm Password Field (Only on Sign Up)
+                AnimatedVisibility(
+                    visible = uiState.isSignUpMode,
+                    enter = fadeIn() + slideInVertically { -it / 2 },
+                    exit = fadeOut() + slideOutVertically { -it / 2 }
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        OutlinedTextField(
+                            value = confirmPassword,
+                            onValueChange = { viewModel.onConfirmPasswordChange(it) },
+                            label = { Text("Confirm Password") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = "Lock Icon",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
+                                    Icon(
+                                        imageVector = if (isConfirmPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = if (isConfirmPasswordVisible) "Hide Password" else "Show Password",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
+                            singleLine = true,
+                            visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    focusManager.clearFocus()
+                                    viewModel.onSignUpClick(email, password, confirmPassword)
+                                }
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = if (confirmPassword.isNotEmpty() && password == confirmPassword)
+                                    Color(0xFF4ADE80)
+                                else
+                                    MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        )
 
-                // Action Button (Sign In / Sign Up)
+                        if (confirmPassword.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.padding(start = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                val passwordsMatch = password == confirmPassword
+                                Icon(
+                                    imageVector = if (passwordsMatch) Icons.Default.CheckCircle else Icons.Default.ErrorOutline,
+                                    contentDescription = null,
+                                    tint = if (passwordsMatch) Color(0xFF4ADE80) else MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (passwordsMatch) "Passwords match" else "Passwords do not match",
+                                    fontSize = 12.sp,
+                                    color = if (passwordsMatch) Color(0xFF4ADE80) else MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Forgot Password Button (Only on Sign In)
+                if (!uiState.isSignUpMode) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(
+                            onClick = {
+                                forgotPasswordEmail = email
+                                showForgotPasswordDialog = true
+                            }
+                        ) {
+                            Text(
+                                text = "Forgot Password?",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                } else {
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
+
+                // Main Submit Button
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -213,8 +530,9 @@ fun LoginScreen(
                     } else {
                         Button(
                             onClick = {
+                                focusManager.clearFocus()
                                 if (uiState.isSignUpMode) {
-                                    viewModel.onSignUpClick(email, password)
+                                    viewModel.onSignUpClick(email, password, confirmPassword)
                                 } else {
                                     viewModel.onSignInClick(email, password)
                                 }
@@ -229,8 +547,8 @@ fun LoginScreen(
                             )
                         ) {
                             Text(
-                                text = if (uiState.isSignUpMode) "Sign Up" else "Sign In",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                                text = if (uiState.isSignUpMode) "Create Account" else "Sign In",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                             )
                         }
                     }
@@ -242,8 +560,8 @@ fun LoginScreen(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
                     ) {
                         Row(
                             modifier = Modifier.padding(14.dp),
@@ -265,16 +583,33 @@ fun LoginScreen(
                     }
                 }
 
-                // Error Message
+                // Error Message Banner
                 if (uiState.errorMessage != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = uiState.errorMessage ?: "",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ErrorOutline,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = uiState.errorMessage ?: "",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
                 }
 
                 // Resend Verification Email Button
@@ -292,23 +627,7 @@ fun LoginScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Toggle Mode Text Button
-                TextButton(
-                    onClick = { viewModel.toggleMode() }
-                ) {
-                    Text(
-                        text = if (uiState.isSignUpMode)
-                            "Already have an account? Sign in"
-                        else
-                            "Don't have an account? Sign up",
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 // Divider "or"
                 Row(
@@ -331,7 +650,7 @@ fun LoginScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
                 // Google Sign In Outlined Button
                 OutlinedButton(
@@ -367,14 +686,33 @@ fun LoginScreen(
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color(0xFF334155)),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color(0xFF0F172A)
+                    ),
                     enabled = !uiState.isLoading
                 ) {
-                    Text(
-                        text = "G  Continue with Google",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "G",
+                            fontFamily = FontFamily.SansSerif,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color(0xFF4CD7F6)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Continue with Google",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                            color = Color(0xFFF1F5F9)
+                        )
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
