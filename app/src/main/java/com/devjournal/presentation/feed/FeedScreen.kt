@@ -42,6 +42,8 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -268,6 +270,23 @@ fun FeedScreen(
                 .padding(paddingValues)
                 .background(MaterialTheme.colorScheme.background)
         ) {
+            TabRow(
+                selectedTabIndex = if (uiState.selectedSortOption == FeedSortOption.LATEST) 0 else 1,
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.primary
+            ) {
+                Tab(
+                    selected = uiState.selectedSortOption == FeedSortOption.LATEST,
+                    onClick = { viewModel.onSortOptionSelected(FeedSortOption.LATEST) },
+                    text = { Text("Latest", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
+                )
+                Tab(
+                    selected = uiState.selectedSortOption == FeedSortOption.TRENDING,
+                    onClick = { viewModel.onSortOptionSelected(FeedSortOption.TRENDING) },
+                    text = { Text("Trending", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
+                )
+            }
+
             // Horizontal Tag Filter Chips
             Row(
                 modifier = Modifier

@@ -21,6 +21,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import javax.inject.Inject
 
+enum class FeedSortOption {
+    LATEST,
+    TRENDING
+}
+
 data class FeedUiState(
     val posts: List<Post> = emptyList(),
     val allPosts: List<Post> = emptyList(),
@@ -31,7 +36,8 @@ data class FeedUiState(
     val currentUserId: String? = null,
     val currentUserPhotoUrl: String? = null,
     val likedPostIds: Set<String> = emptySet(),
-    val bookmarkedPostIds: Set<String> = emptySet()
+    val bookmarkedPostIds: Set<String> = emptySet(),
+    val selectedSortOption: FeedSortOption = FeedSortOption.LATEST
 )
 
 @HiltViewModel
@@ -108,10 +114,10 @@ class FeedViewModel @Inject constructor(
         viewModelScope.launch {
             getPostsUseCase().collect { postsList ->
                 _uiState.update { state ->
-                    val filtered = filterPostsByTag(postsList, state.selectedTag)
+                    val filteredAndSorted = filterAndSortPosts(postsList, state.selectedTag, state.selectedSortOption)
                     state.copy(
                         allPosts = postsList,
-                        posts = filtered,
+                        posts = filteredAndSorted,
                         isLoading = false
                     )
                 }
@@ -121,10 +127,22 @@ class FeedViewModel @Inject constructor(
 
     fun onTagSelected(tag: String) {
         _uiState.update { state ->
-            val filtered = filterPostsByTag(state.allPosts, tag)
+            val filteredAndSorted = filterAndSortPosts(state.allPosts, tag, state.selectedSortOption)
             state.copy(
                 selectedTag = tag,
-                posts = filtered
+                posts = filteredAndSorted
+            )
+        }
+    }
+    
+    fun onSortOptionSelected(option: FeedSortOption) {
+        if (_uiState.value.selectedSortOption == option) return
+        
+        _uiState.update { state ->
+            val filteredAndSorted = filterAndSortPosts(state.allPosts, state.selectedTag, option)
+            state.copy(
+                selectedSortOption = option,
+                posts = filteredAndSorted
             )
         }
     }
@@ -195,12 +213,18 @@ class FeedViewModel @Inject constructor(
         }
     }
 
-    private fun filterPostsByTag(posts: List<Post>, tag: String): List<Post> {
-        if (tag.equals("All", ignoreCase = true)) {
-            return posts
+    private fun filterAndSortPosts(posts: List<Post>, tag: String, sortOption: FeedSortOption): List<Post> {
+        val filtered = if (tag.equals("All", ignoreCase = true)) {
+            posts
+        } else {
+            posts.filter { post ->
+                post.tags.any { it.equals(tag, ignoreCase = true) || it.equals("#$tag", ignoreCase = true) }
+            }
         }
-        return posts.filter { post ->
-            post.tags.any { it.equals(tag, ignoreCase = true) || it.equals("#$tag", ignoreCase = true) }
+        
+        return when (sortOption) {
+            FeedSortOption.LATEST -> filtered.sortedByDescending { it.createdAt }
+            FeedSortOption.TRENDING -> filtered.sortedByDescending { it.likeCount + it.commentCount }
         }
     }
 }
