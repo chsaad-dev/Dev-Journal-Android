@@ -152,7 +152,7 @@ fun SettingsScreen(
             item { SettingsSectionHeader("PRIVACY") }
             item {
                 SettingsSwitchItem(
-                    icon = Icons.Default.LockOutline,
+                    icon = Icons.Outlined.Lock,
                     title = "Private Account",
                     initialValue = false
                 )
