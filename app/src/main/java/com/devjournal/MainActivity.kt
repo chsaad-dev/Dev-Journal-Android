@@ -15,12 +15,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.devjournal.presentation.auth.LoginScreen
-import com.devjournal.presentation.author.AuthorProfileScreen
 import com.devjournal.presentation.editor.PostEditorScreen
 import com.devjournal.presentation.feed.FeedScreen
 import com.devjournal.presentation.notifications.NotificationsScreen
 import com.devjournal.presentation.postdetail.PostDetailScreen
 import com.devjournal.presentation.profile.ProfileScreen
+import com.devjournal.presentation.settings.SettingsScreen
 import com.devjournal.presentation.search.SearchScreen
 import com.devjournal.presentation.splash.SplashScreen
 import com.devjournal.ui.theme.DevJournalTheme
@@ -94,7 +94,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("search")
                             },
                             onAuthorClick = { authorId ->
-                                navController.navigate("author/$authorId")
+                                navController.navigate("profile?uid=$authorId")
                             }
                         )
                     }
@@ -104,7 +104,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         PostDetailScreen(
                             onAuthorClick = { authorId ->
-                                navController.navigate("author/$authorId")
+                                navController.navigate("profile?uid=$authorId")
                             },
                             onBackClick = {
                                 navController.popBackStack()
@@ -112,30 +112,28 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable(
-                        route = "author/{authorId}",
-                        arguments = listOf(navArgument("authorId") { type = NavType.StringType })
+                        route = "profile?uid={uid}",
+                        arguments = listOf(navArgument("uid") { type = NavType.StringType; nullable = true; defaultValue = null })
                     ) {
-                        AuthorProfileScreen(
+                        ProfileScreen(
                             onPostClick = { postId ->
                                 navController.navigate("postdetail/$postId")
+                            },
+                            onSettingsClick = {
+                                navController.navigate("settings")
                             },
                             onBackClick = {
                                 navController.popBackStack()
                             }
                         )
                     }
-                    composable("profile") {
-                        ProfileScreen(
-                            onPostClick = { postId ->
-                                navController.navigate("postdetail/$postId")
-                            },
+                    composable("settings") {
+                        SettingsScreen(
+                            onBackClick = { navController.popBackStack() },
                             onSignedOut = {
                                 navController.navigate("login") {
                                     popUpTo(navController.graph.id) { inclusive = true }
                                 }
-                            },
-                            onBackClick = {
-                                navController.popBackStack()
                             }
                         )
                     }
