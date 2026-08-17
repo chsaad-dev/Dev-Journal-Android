@@ -69,7 +69,6 @@ import coil.compose.AsyncImage
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PostEditorScreen(
-    postId: String? = null,
     viewModel: PostEditorViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
     onSaved: () -> Unit

@@ -156,7 +156,6 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("editor") {
                         PostEditorScreen(
-                            postId = null,
                             onBackClick = {
                                 navController.popBackStack()
                             },
@@ -168,10 +167,8 @@ class MainActivity : ComponentActivity() {
                     composable(
                         route = "editor/{postId}",
                         arguments = listOf(navArgument("postId") { type = NavType.StringType })
-                    ) { backStackEntry ->
-                        val postId = backStackEntry.arguments?.getString("postId") ?: ""
+                    ) {
                         PostEditorScreen(
-                            postId = postId,
                             onBackClick = {
                                 navController.popBackStack()
                             },

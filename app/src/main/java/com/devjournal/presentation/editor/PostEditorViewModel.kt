@@ -207,7 +207,7 @@ class PostEditorViewModel @Inject constructor(
                     }
                 } else {
                     val result = createPostUseCase(post)
-                    result.onSuccess { newId ->
+                    result.onSuccess { _ ->
                         if (state.published) {
                             try {
                                 notifyWorkerApi.sendNotification(

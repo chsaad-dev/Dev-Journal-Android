@@ -32,7 +32,6 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun DevJournalTheme(
-    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val colorScheme = DarkColorScheme

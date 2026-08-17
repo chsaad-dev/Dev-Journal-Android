@@ -258,7 +258,7 @@ fun ProfileScreen(
                                     )
                                 }
                                 
-                                Divider(
+                                VerticalDivider(
                                     modifier = Modifier.height(32.dp).width(1.dp),
                                     color = MaterialTheme.colorScheme.outlineVariant
                                 )
