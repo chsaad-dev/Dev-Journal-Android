@@ -357,6 +357,7 @@ fun FeedScreen(
                     items(uiState.posts, key = { it.id }) { post ->
                         PostCard(
                             post = post,
+                            authorName = uiState.authorNames[post.authorId] ?: "",
                             isLiked = uiState.likedPostIds.contains(post.id),
                             isBookmarked = uiState.bookmarkedPostIds.contains(post.id),
                             onLikeClick = {

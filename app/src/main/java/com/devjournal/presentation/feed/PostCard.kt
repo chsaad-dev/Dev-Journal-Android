@@ -56,6 +56,7 @@ import java.util.Locale
 @Composable
 fun PostCard(
     post: Post,
+    authorName: String = "",
     isLiked: Boolean,
     isBookmarked: Boolean,
     onLikeClick: () -> Unit,
@@ -159,7 +160,7 @@ fun PostCard(
 
                         Column {
                             Text(
-                                text = if (post.authorId.isNotBlank()) "Author: ${post.authorId.take(8)}" else "DevJournal Author",
+                                text = if (authorName.isNotBlank()) "Author: $authorName" else if (post.authorId.isNotBlank()) "Author: ${post.authorId.take(8)}" else "DevJournal Author",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )

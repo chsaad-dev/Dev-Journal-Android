@@ -80,7 +80,6 @@ import com.devjournal.presentation.util.sharePost
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostDetailScreen(
-    postId: String,
     viewModel: PostDetailViewModel = hiltViewModel(),
     onAuthorClick: (String) -> Unit = {},
     onBackClick: () -> Unit
@@ -392,7 +391,7 @@ fun PostDetailScreen(
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = if (post.authorId.isNotBlank()) "Author: ${post.authorId.take(8)}" else "DevJournal Author",
+                                text = if (uiState.authorName.isNotBlank()) "Author: ${uiState.authorName}" else if (post.authorId.isNotBlank()) "Author: ${post.authorId.take(8)}" else "DevJournal Author",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )

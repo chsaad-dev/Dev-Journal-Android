@@ -37,7 +37,8 @@ data class FeedUiState(
     val currentUserPhotoUrl: String? = null,
     val likedPostIds: Set<String> = emptySet(),
     val bookmarkedPostIds: Set<String> = emptySet(),
-    val selectedSortOption: FeedSortOption = FeedSortOption.LATEST
+    val selectedSortOption: FeedSortOption = FeedSortOption.LATEST,
+    val authorNames: Map<String, String> = emptyMap()
 )
 
 @HiltViewModel
@@ -113,11 +114,22 @@ class FeedViewModel @Inject constructor(
     private fun observePosts() {
         viewModelScope.launch {
             getPostsUseCase().collect { postsList ->
+                val currentNames = _uiState.value.authorNames.toMutableMap()
+                val missingIds = postsList.map { it.authorId }.distinct().filter { !currentNames.containsKey(it) && it.isNotBlank() }
+                
+                missingIds.forEach { uid ->
+                    val profile = getUserProfileUseCase(uid)
+                    if (profile != null && profile.name.isNotBlank()) {
+                        currentNames[uid] = profile.name
+                    }
+                }
+
                 _uiState.update { state ->
                     val filteredAndSorted = filterAndSortPosts(postsList, state.selectedTag, state.selectedSortOption)
                     state.copy(
                         allPosts = postsList,
                         posts = filteredAndSorted,
+                        authorNames = currentNames,
                         isLoading = false
                     )
                 }

@@ -101,10 +101,8 @@ class MainActivity : ComponentActivity() {
                     composable(
                         route = "postdetail/{postId}",
                         arguments = listOf(navArgument("postId") { type = NavType.StringType })
-                    ) { backStackEntry ->
-                        val postId = backStackEntry.arguments?.getString("postId") ?: ""
+                    ) {
                         PostDetailScreen(
-                            postId = postId,
                             onAuthorClick = { authorId ->
                                 navController.navigate("author/$authorId")
                             },

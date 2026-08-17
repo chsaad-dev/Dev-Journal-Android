@@ -38,7 +38,8 @@ data class PostDetailUiState(
     val isAdmin: Boolean = false,
     val isDeletingPost: Boolean = false,
     val postDeleted: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val authorName: String = ""
 )
 
 @HiltViewModel
@@ -72,7 +73,13 @@ class PostDetailViewModel @Inject constructor(
     private fun observePost() {
         viewModelScope.launch {
             getPostDetailUseCase(postId).collect { post ->
-                _uiState.update { it.copy(post = post, isLoading = false) }
+                if (post != null && post.authorId.isNotBlank()) {
+                    val profile = getUserProfileUseCase(post.authorId)
+                    val authorName = if (profile != null && profile.name.isNotBlank()) profile.name else ""
+                    _uiState.update { it.copy(post = post, authorName = authorName, isLoading = false) }
+                } else {
+                    _uiState.update { it.copy(post = post, isLoading = false) }
+                }
             }
         }
     }
