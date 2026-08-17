@@ -74,6 +74,8 @@ import coil.compose.AsyncImage
 import com.devjournal.data.model.Comment
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.compose.ui.platform.LocalContext
+import com.devjournal.presentation.util.sharePost
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,6 +87,7 @@ fun PostDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val post = uiState.post
+    val context = LocalContext.current
     
     LaunchedEffect(uiState.postDeleted) {
         if (uiState.postDeleted) {
@@ -181,7 +184,7 @@ fun PostDetailScreen(
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     IconButton(
-                        onClick = { /* Share Post */ },
+                        onClick = { post?.let { sharePost(context, it) } },
                         modifier = Modifier
                             .padding(8.dp)
                             .background(Color.Black.copy(alpha = 0.45f), CircleShape)

@@ -76,6 +76,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
+import com.devjournal.presentation.util.sharePost
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -375,7 +376,7 @@ fun FeedScreen(
                                 }
                             },
                             onCommentClick = { onPostClick(post.id) },
-                            onShareClick = { /* Share functionality */ },
+                            onShareClick = { sharePost(context, post) },
                             onPostClick = { onPostClick(post.id) },
                             canEdit = uiState.currentUserId != null && post.authorId == uiState.currentUserId,
                             canDelete = uiState.isAdmin || (uiState.currentUserId != null && post.authorId == uiState.currentUserId),
