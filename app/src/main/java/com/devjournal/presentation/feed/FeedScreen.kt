@@ -358,6 +358,7 @@ fun FeedScreen(
                         PostCard(
                             post = post,
                             authorName = uiState.authorNames[post.authorId] ?: "",
+                            authorPhotoUrl = uiState.authorPhotoUrls[post.authorId] ?: "",
                             isLiked = uiState.likedPostIds.contains(post.id),
                             isBookmarked = uiState.bookmarkedPostIds.contains(post.id),
                             onLikeClick = {

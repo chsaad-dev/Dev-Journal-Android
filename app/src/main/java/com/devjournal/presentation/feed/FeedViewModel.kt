@@ -38,7 +38,8 @@ data class FeedUiState(
     val likedPostIds: Set<String> = emptySet(),
     val bookmarkedPostIds: Set<String> = emptySet(),
     val selectedSortOption: FeedSortOption = FeedSortOption.LATEST,
-    val authorNames: Map<String, String> = emptyMap()
+    val authorNames: Map<String, String> = emptyMap(),
+    val authorPhotoUrls: Map<String, String> = emptyMap()
 )
 
 @HiltViewModel
@@ -115,12 +116,18 @@ class FeedViewModel @Inject constructor(
         viewModelScope.launch {
             getPostsUseCase().collect { postsList ->
                 val currentNames = _uiState.value.authorNames.toMutableMap()
+                val currentPhotos = _uiState.value.authorPhotoUrls.toMutableMap()
                 val missingIds = postsList.map { it.authorId }.distinct().filter { !currentNames.containsKey(it) && it.isNotBlank() }
                 
                 missingIds.forEach { uid ->
                     val profile = getUserProfileUseCase(uid)
-                    if (profile != null && profile.name.isNotBlank()) {
-                        currentNames[uid] = profile.name
+                    if (profile != null) {
+                        if (profile.name.isNotBlank()) {
+                            currentNames[uid] = profile.name
+                        }
+                        if (profile.photoUrl.isNotBlank()) {
+                            currentPhotos[uid] = profile.photoUrl
+                        }
                     }
                 }
 
@@ -130,6 +137,7 @@ class FeedViewModel @Inject constructor(
                         allPosts = postsList,
                         posts = filteredAndSorted,
                         authorNames = currentNames,
+                        authorPhotoUrls = currentPhotos,
                         isLoading = false
                     )
                 }

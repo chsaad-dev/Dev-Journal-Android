@@ -39,7 +39,8 @@ data class PostDetailUiState(
     val isDeletingPost: Boolean = false,
     val postDeleted: Boolean = false,
     val errorMessage: String? = null,
-    val authorName: String = ""
+    val authorName: String = "",
+    val authorPhotoUrl: String = ""
 )
 
 @HiltViewModel
@@ -76,7 +77,8 @@ class PostDetailViewModel @Inject constructor(
                 if (post != null && post.authorId.isNotBlank()) {
                     val profile = getUserProfileUseCase(post.authorId)
                     val authorName = if (profile != null && profile.name.isNotBlank()) profile.name else ""
-                    _uiState.update { it.copy(post = post, authorName = authorName, isLoading = false) }
+                    val authorPhotoUrl = if (profile != null && profile.photoUrl.isNotBlank()) profile.photoUrl else ""
+                    _uiState.update { it.copy(post = post, authorName = authorName, authorPhotoUrl = authorPhotoUrl, isLoading = false) }
                 } else {
                     _uiState.update { it.copy(post = post, isLoading = false) }
                 }

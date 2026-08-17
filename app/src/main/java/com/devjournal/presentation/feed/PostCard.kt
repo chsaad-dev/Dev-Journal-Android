@@ -57,6 +57,7 @@ import java.util.Locale
 fun PostCard(
     post: Post,
     authorName: String = "",
+    authorPhotoUrl: String = "",
     isLiked: Boolean,
     isBookmarked: Boolean,
     onLikeClick: () -> Unit,
@@ -141,19 +142,30 @@ fun PostCard(
                             ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AccountCircle,
+                        if (authorPhotoUrl.isNotBlank()) {
+                            AsyncImage(
+                                model = authorPhotoUrl,
                                 contentDescription = "Author Avatar",
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.size(36.dp)
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
                             )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AccountCircle,
+                                    contentDescription = "Author Avatar",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.width(10.dp))
