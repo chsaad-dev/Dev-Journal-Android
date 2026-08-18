@@ -294,6 +294,23 @@ class PostRepositoryImpl @Inject constructor(
         null
     }
 
+    override fun getDraftsByAuthor(authorId: String): Flow<List<Post>> = callbackFlow {
+        val listener = firestore.collection("posts")
+            .whereEqualTo("authorId", authorId)
+            .whereEqualTo("published", false)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    close()
+                    return@addSnapshotListener
+                }
+                val posts = snapshot?.toObjects(Post::class.java) ?: emptyList()
+                trySend(posts)
+            }
+        awaitClose { listener.remove() }
+    }
+
     private fun generateSlug(title: String): String {
         val normalized = title.lowercase(java.util.Locale.ROOT)
             .replace(Regex("[^a-z0-9\\s-]"), "")

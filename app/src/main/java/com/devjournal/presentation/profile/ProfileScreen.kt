@@ -338,7 +338,7 @@ fun ProfileScreen(
                 if (uiState.isOwnProfile) {
                     val isDrafts = selectedTabIndex == 2
                     val postsToShow = if (selectedTabIndex == 0) uiState.likedPosts else uiState.bookmarkedPosts
-                    val draftsToShow = uiState.localDrafts
+                    val draftsToShow = uiState.remoteDrafts
 
                     if ((!isDrafts && postsToShow.isEmpty()) || (isDrafts && draftsToShow.isEmpty())) {
                         item(span = { GridItemSpan(2) }) {
@@ -366,9 +366,9 @@ fun ProfileScreen(
                                 )
                             ) {
                                 Box(modifier = Modifier.fillMaxSize()) {
-                                    if (draft.coverImageUri.isNotBlank()) {
+                                    if (draft.coverImageUrl.isNotBlank()) {
                                         AsyncImage(
-                                            model = draft.coverImageUri,
+                                            model = draft.coverImageUrl,
                                             contentDescription = null,
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier.fillMaxSize()
@@ -395,13 +395,13 @@ fun ProfileScreen(
                                         Text(
                                             text = draft.title.ifBlank { "Untitled Draft" },
                                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = if (draft.coverImageUri.isNotBlank()) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = if (draft.coverImageUrl.isNotBlank()) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 2,
                                             overflow = TextOverflow.Ellipsis
                                         )
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            text = "Local Draft",
+                                            text = "Draft",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.primary,
                                             maxLines = 1
