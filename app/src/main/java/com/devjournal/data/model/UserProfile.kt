@@ -11,5 +11,6 @@ data class UserProfile(
     var role: String = "reader",
     var fcmTokens: List<String> = emptyList(),
     var followerCount: Int = 0,
-    var followingCount: Int = 0
+    var followingCount: Int = 0,
+    var suspended: Boolean = false
 )

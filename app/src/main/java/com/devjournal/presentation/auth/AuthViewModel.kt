@@ -3,12 +3,14 @@ package com.devjournal.presentation.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devjournal.domain.repository.AuthRepository
+import com.devjournal.domain.usecase.GetUserProfileUseCase
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
 import com.devjournal.domain.usecase.RegisterFcmTokenUseCase
 import com.devjournal.domain.usecase.ResendVerificationEmailUseCase
 import com.devjournal.domain.usecase.SendPasswordResetEmailUseCase
 import com.devjournal.domain.usecase.SignInUseCase
 import com.devjournal.domain.usecase.SignInWithGoogleUseCase
+import com.devjournal.domain.usecase.SignOutUseCase
 import com.devjournal.domain.usecase.SignUpUseCase
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -39,6 +41,8 @@ class AuthViewModel @Inject constructor(
     private val registerFcmTokenUseCase: RegisterFcmTokenUseCase,
     private val resendVerificationEmailUseCase: ResendVerificationEmailUseCase,
     private val sendPasswordResetEmailUseCase: SendPasswordResetEmailUseCase,
+    private val getUserProfileUseCase: GetUserProfileUseCase,
+    private val signOutUseCase: SignOutUseCase,
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
@@ -59,8 +63,21 @@ class AuthViewModel @Inject constructor(
             observeAuthStateUseCase().collect { user ->
                 if (user != null) {
                     if (authRepository.isUserVerified(user)) {
-                        registerFcmTokenForUser(user.uid)
-                        _uiState.update { it.copy(isAuthenticated = true, isLoading = false) }
+                        // Check suspension before granting access
+                        val profile = getUserProfileUseCase(user.uid)
+                        if (profile?.suspended == true) {
+                            signOutUseCase()
+                            _uiState.update {
+                                it.copy(
+                                    isAuthenticated = false,
+                                    isLoading = false,
+                                    errorMessage = "Your account has been suspended. Contact support for more information."
+                                )
+                            }
+                        } else {
+                            registerFcmTokenForUser(user.uid)
+                            _uiState.update { it.copy(isAuthenticated = true, isLoading = false) }
+                        }
                     } else {
                         _uiState.update { it.copy(isAuthenticated = false, isLoading = false) }
                     }
@@ -112,8 +129,21 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null, showResendButton = false) }
             val result = signInUseCase(email.trim(), password)
             result.onSuccess { user ->
-                registerFcmTokenForUser(user.uid)
-                _uiState.update { it.copy(isLoading = false, isAuthenticated = true) }
+                // Check suspension before granting access
+                val profile = getUserProfileUseCase(user.uid)
+                if (profile?.suspended == true) {
+                    signOutUseCase()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isAuthenticated = false,
+                            errorMessage = "Your account has been suspended. Contact support for more information."
+                        )
+                    }
+                } else {
+                    registerFcmTokenForUser(user.uid)
+                    _uiState.update { it.copy(isLoading = false, isAuthenticated = true) }
+                }
             }.onFailure { error ->
                 val errorMsg = error.localizedMessage ?: "Authentication failed"
                 val isUnverified = errorMsg.contains("verify", ignoreCase = true)
@@ -225,8 +255,21 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null, showResendButton = false) }
             val result = signInWithGoogleUseCase(idToken)
             result.onSuccess { user ->
-                registerFcmTokenForUser(user.uid)
-                _uiState.update { it.copy(isLoading = false, isAuthenticated = true) }
+                // Check suspension before granting access
+                val profile = getUserProfileUseCase(user.uid)
+                if (profile?.suspended == true) {
+                    signOutUseCase()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isAuthenticated = false,
+                            errorMessage = "Your account has been suspended. Contact support for more information."
+                        )
+                    }
+                } else {
+                    registerFcmTokenForUser(user.uid)
+                    _uiState.update { it.copy(isLoading = false, isAuthenticated = true) }
+                }
             }.onFailure { error ->
                 _uiState.update { it.copy(isLoading = false, errorMessage = error.localizedMessage ?: "Google sign-in failed") }
             }
