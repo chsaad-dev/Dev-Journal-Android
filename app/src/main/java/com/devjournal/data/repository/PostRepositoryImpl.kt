@@ -36,14 +36,14 @@ class PostRepositoryImpl @Inject constructor(
         val listener = firestore.collection("posts")
             .whereEqualTo("authorId", authorId)
             .whereEqualTo("published", true)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(emptyList())
                     close()
                     return@addSnapshotListener
                 }
-                val posts = snapshot?.toObjects(Post::class.java) ?: emptyList()
+                val posts = snapshot?.toObjects(Post::class.java)
+                    ?.sortedByDescending { it.createdAt } ?: emptyList()
                 trySend(posts)
             }
         awaitClose { listener.remove() }
@@ -298,14 +298,14 @@ class PostRepositoryImpl @Inject constructor(
         val listener = firestore.collection("posts")
             .whereEqualTo("authorId", authorId)
             .whereEqualTo("published", false)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(emptyList())
                     close()
                     return@addSnapshotListener
                 }
-                val posts = snapshot?.toObjects(Post::class.java) ?: emptyList()
+                val posts = snapshot?.toObjects(Post::class.java)
+                    ?.sortedByDescending { it.createdAt } ?: emptyList()
                 trySend(posts)
             }
         awaitClose { listener.remove() }
