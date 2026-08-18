@@ -4,7 +4,7 @@ import com.devjournal.data.model.Post
 import kotlinx.coroutines.flow.Flow
 
 interface PostRepository {
-    fun getPublishedPosts(): Flow<List<Post>>
+    fun getPublishedPosts(limit: Int = 10): Flow<List<Post>>
     fun getPostsByAuthor(authorId: String): Flow<List<Post>>
     fun getPostById(postId: String): Flow<Post?>
     fun isPostLiked(postId: String, uid: String): Flow<Boolean>

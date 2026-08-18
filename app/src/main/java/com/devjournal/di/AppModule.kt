@@ -1,14 +1,19 @@
 package com.devjournal.di
 
 import android.content.Context
+import androidx.room.Room
+import com.devjournal.data.model.local.AppDatabase
+import com.devjournal.data.model.local.DraftDao
 import com.devjournal.data.remote.CloudinaryUploader
 import com.devjournal.data.remote.NotifyWorkerApi
 import com.devjournal.data.repository.AuthRepositoryImpl
 import com.devjournal.data.repository.CommentRepositoryImpl
+import com.devjournal.data.repository.DraftRepositoryImpl
 import com.devjournal.data.repository.PostRepositoryImpl
 import com.devjournal.data.repository.UserRepositoryImpl
 import com.devjournal.domain.repository.AuthRepository
 import com.devjournal.domain.repository.CommentRepository
+import com.devjournal.domain.repository.DraftRepository
 import com.devjournal.domain.repository.PostRepository
 import com.devjournal.domain.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -35,21 +40,33 @@ abstract class AppModule {
 
     @Binds
     @Singleton
-    abstract fun bindCommentRepository(
-        impl: CommentRepositoryImpl
-    ): CommentRepository
-
-    @Binds
-    @Singleton
     abstract fun bindUserRepository(
         impl: UserRepositoryImpl
     ): UserRepository
 
     @Binds
     @Singleton
+    abstract fun bindCommentRepository(
+        impl: CommentRepositoryImpl
+    ): CommentRepository
+
+    @Binds
+    @Singleton
     abstract fun bindAuthRepository(
-        impl: AuthRepositoryImpl
+        authRepositoryImpl: AuthRepositoryImpl
     ): AuthRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPostRepository(
+        postRepositoryImpl: PostRepositoryImpl
+    ): PostRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDraftRepository(
+        draftRepositoryImpl: DraftRepositoryImpl
+    ): DraftRepository
 
     companion object {
         @Provides

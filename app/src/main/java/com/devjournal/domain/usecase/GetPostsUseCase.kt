@@ -8,5 +8,5 @@ import javax.inject.Inject
 class GetPostsUseCase @Inject constructor(
     private val repository: PostRepository
 ) {
-    operator fun invoke(): Flow<List<Post>> = repository.getPublishedPosts()
+    operator fun invoke(limit: Int = 10): Flow<List<Post>> = repository.getPublishedPosts(limit)
 }

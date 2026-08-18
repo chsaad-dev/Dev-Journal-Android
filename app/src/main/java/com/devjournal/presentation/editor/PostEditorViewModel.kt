@@ -9,9 +9,15 @@ import com.devjournal.data.remote.CloudinaryUploader
 import com.devjournal.data.remote.NotifyWorkerApi
 import com.devjournal.domain.usecase.CreatePostUseCase
 import com.devjournal.domain.usecase.GetDraftUseCase
+import com.devjournal.domain.usecase.GetDraftByIdUseCase
+import com.devjournal.domain.usecase.SaveDraftUseCase
+import com.devjournal.domain.usecase.DeleteDraftUseCase
+import com.devjournal.data.model.local.DraftEntity
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
 import com.devjournal.domain.usecase.UpdatePostUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +37,7 @@ data class PostEditorUiState(
     val published: Boolean = true,
     val isSaving: Boolean = false,
     val isEditMode: Boolean = false,
+    val localDraftId: String? = null,
     val currentUserId: String? = null,
     val errorMessage: String? = null
 )
@@ -40,6 +47,9 @@ class PostEditorViewModel @Inject constructor(
     private val createPostUseCase: CreatePostUseCase,
     private val updatePostUseCase: UpdatePostUseCase,
     private val getDraftUseCase: GetDraftUseCase,
+    private val getLocalDraftUseCase: GetDraftByIdUseCase,
+    private val saveDraftUseCase: SaveDraftUseCase,
+    private val deleteDraftUseCase: DeleteDraftUseCase,
     private val cloudinaryUploader: CloudinaryUploader,
     private val notifyWorkerApi: NotifyWorkerApi,
     private val observeAuthStateUseCase: ObserveAuthStateUseCase,
@@ -47,14 +57,19 @@ class PostEditorViewModel @Inject constructor(
 ) : ViewModel() {
 
     val postId: String? = savedStateHandle.get<String>("postId")?.takeIf { it.isNotBlank() && it != "{postId}" }
+    val draftId: String? = savedStateHandle.get<String>("draftId")?.takeIf { it.isNotBlank() && it != "{draftId}" }
 
-    private val _uiState = MutableStateFlow(PostEditorUiState(isEditMode = postId != null))
+    private val _uiState = MutableStateFlow(PostEditorUiState(isEditMode = postId != null, localDraftId = draftId ?: (postId ?: java.util.UUID.randomUUID().toString())))
     val uiState: StateFlow<PostEditorUiState> = _uiState.asStateFlow()
+    
+    private var autoSaveJob: Job? = null
 
     init {
         observeCurrentUser()
         if (!postId.isNullOrBlank()) {
             loadExistingPost(postId)
+        } else if (!draftId.isNullOrBlank()) {
+            loadLocalDraft(draftId)
         }
     }
 
@@ -88,12 +103,52 @@ class PostEditorViewModel @Inject constructor(
         }
     }
 
+    private fun loadLocalDraft(id: String) {
+        viewModelScope.launch {
+            val draft = getLocalDraftUseCase(id)
+            if (draft != null) {
+                _uiState.update {
+                    it.copy(
+                        title = draft.title,
+                        content = draft.content,
+                        excerpt = draft.excerpt,
+                        tags = draft.tags.split(",").filter { t -> t.isNotBlank() },
+                        coverImageUrl = draft.coverImageUri,
+                        isEditMode = false // Assume new post if loaded from local drafts, unless we want to track remote ID
+                    )
+                }
+            }
+        }
+    }
+
+    private fun triggerAutoSave() {
+        autoSaveJob?.cancel()
+        autoSaveJob = viewModelScope.launch {
+            delay(2000) // Debounce 2 seconds
+            val state = _uiState.value
+            if (state.title.isNotBlank() || state.content.isNotBlank()) {
+                val draft = DraftEntity(
+                    id = state.localDraftId ?: java.util.UUID.randomUUID().toString(),
+                    title = state.title,
+                    content = state.content,
+                    excerpt = state.excerpt,
+                    tags = state.tags.joinToString(","),
+                    coverImageUri = state.coverImageUrl,
+                    lastUpdated = System.currentTimeMillis()
+                )
+                saveDraftUseCase(draft)
+            }
+        }
+    }
+
     fun onTitleChange(text: String) {
         _uiState.update { it.copy(title = text, errorMessage = null) }
+        triggerAutoSave()
     }
 
     fun onContentChange(text: String) {
         _uiState.update { it.copy(content = text, errorMessage = null) }
+        triggerAutoSave()
     }
 
     fun onExcerptChange(text: String) {
@@ -130,6 +185,7 @@ class PostEditorViewModel @Inject constructor(
         val currentTags = _uiState.value.tags.toMutableList()
         currentTags.remove(tag)
         _uiState.update { it.copy(tags = currentTags) }
+        triggerAutoSave()
     }
 
     fun onCoverImageSelected(uri: Uri) {
@@ -143,6 +199,7 @@ class PostEditorViewModel @Inject constructor(
                         isUploadingCover = false
                     )
                 }
+                triggerAutoSave()
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(
@@ -218,6 +275,10 @@ class PostEditorViewModel @Inject constructor(
                                 )
                             } catch (_: Exception) {}
                         }
+                        
+                        // Delete local draft on success
+                        state.localDraftId?.let { deleteDraftUseCase(it) }
+                        
                         _uiState.update { it.copy(isSaving = false) }
                         onSuccess()
                     }.onFailure { e ->

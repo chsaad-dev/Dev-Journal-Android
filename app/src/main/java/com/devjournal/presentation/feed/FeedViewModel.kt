@@ -57,6 +57,9 @@ class FeedViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(FeedUiState())
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
     private var interactionsJob: Job? = null
+    private var postsJob: Job? = null
+    
+    private val _postLimit = MutableStateFlow(10)
 
     init {
         observeCurrentUser()
@@ -114,35 +117,44 @@ class FeedViewModel @Inject constructor(
 
     private fun observePosts() {
         viewModelScope.launch {
-            getPostsUseCase().collect { postsList ->
-                val currentNames = _uiState.value.authorNames.toMutableMap()
-                val currentPhotos = _uiState.value.authorPhotoUrls.toMutableMap()
-                val missingIds = postsList.map { it.authorId }.distinct().filter { !currentNames.containsKey(it) && it.isNotBlank() }
-                
-                missingIds.forEach { uid ->
-                    val profile = getUserProfileUseCase(uid)
-                    if (profile != null) {
-                        if (profile.name.isNotBlank()) {
-                            currentNames[uid] = profile.name
+            _postLimit.collect { limit ->
+                postsJob?.cancel()
+                postsJob = launch {
+                    getPostsUseCase(limit).collect { postsList ->
+                        val currentNames = _uiState.value.authorNames.toMutableMap()
+                        val currentPhotos = _uiState.value.authorPhotoUrls.toMutableMap()
+                        val missingIds = postsList.map { it.authorId }.distinct().filter { !currentNames.containsKey(it) && it.isNotBlank() }
+                        
+                        missingIds.forEach { uid ->
+                            val profile = getUserProfileUseCase(uid)
+                            if (profile != null) {
+                                if (profile.name.isNotBlank()) {
+                                    currentNames[uid] = profile.name
+                                }
+                                if (profile.photoUrl.isNotBlank()) {
+                                    currentPhotos[uid] = profile.photoUrl
+                                }
+                            }
                         }
-                        if (profile.photoUrl.isNotBlank()) {
-                            currentPhotos[uid] = profile.photoUrl
+
+                        _uiState.update { state ->
+                            val filteredAndSorted = filterAndSortPosts(postsList, state.selectedTag, state.selectedSortOption)
+                            state.copy(
+                                allPosts = postsList,
+                                posts = filteredAndSorted,
+                                authorNames = currentNames,
+                                authorPhotoUrls = currentPhotos,
+                                isLoading = false
+                            )
                         }
                     }
                 }
-
-                _uiState.update { state ->
-                    val filteredAndSorted = filterAndSortPosts(postsList, state.selectedTag, state.selectedSortOption)
-                    state.copy(
-                        allPosts = postsList,
-                        posts = filteredAndSorted,
-                        authorNames = currentNames,
-                        authorPhotoUrls = currentPhotos,
-                        isLoading = false
-                    )
-                }
             }
         }
+    }
+
+    fun loadMorePosts() {
+        _postLimit.update { it + 10 }
     }
 
     fun onTagSelected(tag: String) {

@@ -39,6 +39,7 @@ import com.devjournal.data.model.Post
 fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
     onPostClick: (String) -> Unit,
+    onDraftClick: (String) -> Unit = {},
     onSettingsClick: () -> Unit,
     onBackClick: () -> Unit = {}
 ) {
@@ -53,7 +54,7 @@ fun ProfileScreen(
     )
     
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Liked", "Saved")
+    val tabs = listOf("Liked", "Saved", "Drafts")
 
     Scaffold(
         topBar = {
@@ -335,19 +336,78 @@ fun ProfileScreen(
                 }
 
                 if (uiState.isOwnProfile) {
+                    val isDrafts = selectedTabIndex == 2
                     val postsToShow = if (selectedTabIndex == 0) uiState.likedPosts else uiState.bookmarkedPosts
+                    val draftsToShow = uiState.localDrafts
 
-                    if (postsToShow.isEmpty()) {
+                    if ((!isDrafts && postsToShow.isEmpty()) || (isDrafts && draftsToShow.isEmpty())) {
                         item(span = { GridItemSpan(2) }) {
                             Box(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = if (selectedTabIndex == 0) "No liked posts yet." else "No saved posts yet.",
+                                    text = if (isDrafts) "No drafts yet." else if (selectedTabIndex == 0) "No liked posts yet." else "No saved posts yet.",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                            }
+                        }
+                    } else if (isDrafts) {
+                        items(draftsToShow) { draft ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                                    .clickable { onDraftClick(draft.id) },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    if (draft.coverImageUri.isNotBlank()) {
+                                        AsyncImage(
+                                            model = draft.coverImageUri,
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(
+                                                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                                                        colors = listOf(
+                                                            androidx.compose.ui.graphics.Color.Transparent,
+                                                            androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.7f)
+                                                        ),
+                                                        startY = 100f
+                                                    )
+                                                )
+                                        )
+                                    }
+                                    Column(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomStart)
+                                            .padding(12.dp)
+                                    ) {
+                                        Text(
+                                            text = draft.title.ifBlank { "Untitled Draft" },
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = if (draft.coverImageUri.isNotBlank()) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Local Draft",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
                             }
                         }
                     } else {

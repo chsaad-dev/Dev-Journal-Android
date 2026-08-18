@@ -11,6 +11,8 @@ import com.devjournal.domain.usecase.FollowUserUseCase
 import com.devjournal.domain.usecase.GetBookmarkedPostsUseCase
 import com.devjournal.domain.usecase.GetLikedPostsUseCase
 import com.devjournal.domain.usecase.GetUserProfileUseCase
+import com.devjournal.domain.usecase.GetDraftsUseCase
+import com.devjournal.data.model.local.DraftEntity
 import com.devjournal.domain.usecase.IsFollowingUseCase
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
 import com.devjournal.domain.usecase.SignOutUseCase
@@ -31,6 +33,7 @@ data class ProfileUiState(
     val profile: UserProfile? = null,
     val likedPosts: List<Post> = emptyList(),
     val bookmarkedPosts: List<Post> = emptyList(),
+    val localDrafts: List<DraftEntity> = emptyList(),
     val isLoading: Boolean = true,
     val isEditing: Boolean = false,
     val editName: String = "",
@@ -58,6 +61,7 @@ class ProfileViewModel @Inject constructor(
     private val followUserUseCase: FollowUserUseCase,
     private val unfollowUserUseCase: UnfollowUserUseCase,
     private val isFollowingUseCase: IsFollowingUseCase,
+    private val getDraftsUseCase: GetDraftsUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -86,6 +90,7 @@ class ProfileViewModel @Inject constructor(
                             isLoading = false,
                             likedPosts = emptyList(),
                             bookmarkedPosts = emptyList(),
+                            localDrafts = emptyList(),
                             profile = null
                         )
                     }
@@ -163,6 +168,16 @@ class ProfileViewModel @Inject constructor(
                     .collect { bookmarked ->
                         _uiState.update { it.copy(bookmarkedPosts = bookmarked) }
                     }
+            }
+
+            if (isOwnProfile) {
+                launch {
+                    getDraftsUseCase()
+                        .catch { /* ignore */ }
+                        .collect { drafts ->
+                            _uiState.update { it.copy(localDrafts = drafts) }
+                        }
+                }
             }
         }
     }

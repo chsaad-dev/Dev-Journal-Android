@@ -119,6 +119,9 @@ class MainActivity : ComponentActivity() {
                             onPostClick = { postId ->
                                 navController.navigate("postdetail/$postId")
                             },
+                            onDraftClick = { draftId ->
+                                navController.navigate("editor?draftId=$draftId")
+                            },
                             onSettingsClick = {
                                 navController.navigate("settings")
                             },
@@ -167,6 +170,19 @@ class MainActivity : ComponentActivity() {
                     composable(
                         route = "editor/{postId}",
                         arguments = listOf(navArgument("postId") { type = NavType.StringType })
+                    ) {
+                        PostEditorScreen(
+                            onBackClick = {
+                                navController.popBackStack()
+                            },
+                            onSaved = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+                    composable(
+                        route = "editor?draftId={draftId}",
+                        arguments = listOf(navArgument("draftId") { type = NavType.StringType; nullable = true; defaultValue = null })
                     ) {
                         PostEditorScreen(
                             onBackClick = {

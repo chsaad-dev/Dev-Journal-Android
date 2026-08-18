@@ -15,10 +15,11 @@ class PostRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : PostRepository {
 
-    override fun getPublishedPosts(): Flow<List<Post>> = callbackFlow {
+    override fun getPublishedPosts(limit: Int): Flow<List<Post>> = callbackFlow {
         val listener = firestore.collection("posts")
             .whereEqualTo("published", true)
             .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(limit.toLong())
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(emptyList())
