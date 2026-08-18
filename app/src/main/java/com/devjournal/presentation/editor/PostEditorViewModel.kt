@@ -254,9 +254,35 @@ class PostEditorViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             try {
+                if (!state.published) {
+                    // Save as local draft
+                    val draft = DraftEntity(
+                        id = state.localDraftId ?: java.util.UUID.randomUUID().toString(),
+                        title = title,
+                        content = content,
+                        excerpt = excerpt,
+                        tags = finalTags.joinToString(","),
+                        coverImageUri = state.coverImageUrl,
+                        lastUpdated = System.currentTimeMillis()
+                    )
+                    saveDraftUseCase(draft)
+                    
+                    // If this was an already published post being unpublished, update Firestore too
+                    if (state.isEditMode && !postId.isNullOrBlank()) {
+                        updatePostUseCase(postId, post)
+                    }
+                    
+                    _uiState.update { it.copy(isSaving = false) }
+                    onSuccess()
+                    return@launch
+                }
+
+                // If published = true
                 if (state.isEditMode && !postId.isNullOrBlank()) {
                     val result = updatePostUseCase(postId, post)
                     result.onSuccess {
+                        // Delete local draft if it exists since it's now published
+                        state.localDraftId?.let { deleteDraftUseCase(it) }
                         _uiState.update { it.copy(isSaving = false) }
                         onSuccess()
                     }.onFailure { e ->
@@ -265,16 +291,14 @@ class PostEditorViewModel @Inject constructor(
                 } else {
                     val result = createPostUseCase(post)
                     result.onSuccess { _ ->
-                        if (state.published) {
-                            try {
-                                notifyWorkerApi.sendNotification(
-                                    type = "new_post",
-                                    targetUid = "",
-                                    title = "New post published: $title",
-                                    body = excerpt
-                                )
-                            } catch (_: Exception) {}
-                        }
+                        try {
+                            notifyWorkerApi.sendNotification(
+                                type = "new_post",
+                                targetUid = "",
+                                title = "New post published: $title",
+                                body = excerpt
+                            )
+                        } catch (_: Exception) {}
                         
                         // Delete local draft on success
                         state.localDraftId?.let { deleteDraftUseCase(it) }
