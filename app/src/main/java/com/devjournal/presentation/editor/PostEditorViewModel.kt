@@ -58,8 +58,9 @@ class PostEditorViewModel @Inject constructor(
 
     val postId: String? = savedStateHandle.get<String>("postId")?.takeIf { it.isNotBlank() && it != "{postId}" }
     val draftId: String? = savedStateHandle.get<String>("draftId")?.takeIf { it.isNotBlank() && it != "{draftId}" }
+    val effectivePostId: String? = postId ?: draftId
 
-    private val _uiState = MutableStateFlow(PostEditorUiState(isEditMode = postId != null, localDraftId = draftId ?: (postId ?: java.util.UUID.randomUUID().toString())))
+    private val _uiState = MutableStateFlow(PostEditorUiState(isEditMode = effectivePostId != null, localDraftId = draftId ?: (postId ?: java.util.UUID.randomUUID().toString())))
     val uiState: StateFlow<PostEditorUiState> = _uiState.asStateFlow()
     
     private var autoSaveJob: Job? = null
@@ -69,7 +70,7 @@ class PostEditorViewModel @Inject constructor(
         if (!postId.isNullOrBlank()) {
             loadExistingPost(postId)
         } else if (!draftId.isNullOrBlank()) {
-            loadLocalDraft(draftId)
+            loadExistingPost(draftId)
         }
     }
 
@@ -240,7 +241,7 @@ class PostEditorViewModel @Inject constructor(
         val authorId = state.currentUserId ?: ""
 
         val post = Post(
-            id = postId ?: "",
+            id = effectivePostId ?: "",
             title = title,
             content = content,
             excerpt = excerpt,
@@ -254,8 +255,8 @@ class PostEditorViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             try {
-                if (state.isEditMode && !postId.isNullOrBlank()) {
-                    val result = updatePostUseCase(postId, post)
+                if (state.isEditMode && !effectivePostId.isNullOrBlank()) {
+                    val result = updatePostUseCase(effectivePostId, post)
                     result.onSuccess {
                         _uiState.update { it.copy(isSaving = false) }
                         onSuccess()
