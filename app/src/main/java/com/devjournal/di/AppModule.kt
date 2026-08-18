@@ -93,6 +93,21 @@ abstract class AppModule {
         fun provideNotifyWorkerApi(
             client: OkHttpClient
         ): NotifyWorkerApi = NotifyWorkerApi(client)
+        @Provides
+        @Singleton
+        fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
+            return Room.databaseBuilder(
+                context,
+                AppDatabase::class.java,
+                "devjournal_database"
+            ).build()
+        }
+
+        @Provides
+        @Singleton
+        fun provideDraftDao(database: AppDatabase): DraftDao {
+            return database.draftDao()
+        }
     }
 }
 
