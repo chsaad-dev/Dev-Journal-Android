@@ -58,12 +58,6 @@ abstract class AppModule {
 
     @Binds
     @Singleton
-    abstract fun bindPostRepository(
-        postRepositoryImpl: PostRepositoryImpl
-    ): PostRepository
-
-    @Binds
-    @Singleton
     abstract fun bindDraftRepository(
         draftRepositoryImpl: DraftRepositoryImpl
     ): DraftRepository

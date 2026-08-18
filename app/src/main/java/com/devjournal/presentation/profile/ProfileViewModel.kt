@@ -170,7 +170,7 @@ class ProfileViewModel @Inject constructor(
                     }
             }
 
-            if (isOwnProfile) {
+            if (_uiState.value.isOwnProfile) {
                 launch {
                     getDraftsUseCase()
                         .catch { /* ignore */ }
