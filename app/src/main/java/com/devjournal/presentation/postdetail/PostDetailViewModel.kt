@@ -1,5 +1,6 @@
 package com.devjournal.presentation.postdetail
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -40,7 +41,9 @@ data class PostDetailUiState(
     val postDeleted: Boolean = false,
     val errorMessage: String? = null,
     val authorName: String = "",
-    val authorPhotoUrl: String = ""
+    val authorPhotoUrl: String = "",
+    val commenterNames: Map<String, String> = emptyMap(),
+    val commenterPhotoUrls: Map<String, String> = emptyMap()
 )
 
 @HiltViewModel
@@ -89,7 +92,19 @@ class PostDetailViewModel @Inject constructor(
     private fun observeComments() {
         viewModelScope.launch {
             getCommentsUseCase(postId).collect { comments ->
-                _uiState.update { it.copy(comments = comments) }
+                val currentNames = _uiState.value.commenterNames.toMutableMap()
+                val currentPhotos = _uiState.value.commenterPhotoUrls.toMutableMap()
+                val missingIds = comments.map { it.userId }.distinct().filter { !currentNames.containsKey(it) && it.isNotBlank() }
+                
+                missingIds.forEach { uid ->
+                    val profile = getUserProfileUseCase(uid)
+                    if (profile != null) {
+                        if (profile.name.isNotBlank()) currentNames[uid] = profile.name
+                        if (profile.photoUrl.isNotBlank()) currentPhotos[uid] = profile.photoUrl
+                    }
+                }
+                
+                _uiState.update { it.copy(comments = comments, commenterNames = currentNames, commenterPhotoUrls = currentPhotos) }
             }
         }
     }
@@ -154,6 +169,7 @@ class PostDetailViewModel @Inject constructor(
             try {
                 bookmarkPostUseCase(postId, uid, alreadyBookmarked)
             } catch (e: Exception) {
+                Log.e("DevJournal", "Bookmark action failed in PostDetail", e)
                 _uiState.update { it.copy(errorMessage = "Failed to update bookmark: ${e.message}") }
             }
         }
@@ -189,6 +205,7 @@ class PostDetailViewModel @Inject constructor(
                 }
                 _uiState.update { it.copy(commentInput = "", isSubmittingComment = false) }
             } catch (e: Exception) {
+                Log.e("DevJournal", "Comment action failed", e)
                 _uiState.update { it.copy(isSubmittingComment = false, errorMessage = "Failed to post comment: ${e.message}") }
             }
         }
@@ -201,6 +218,7 @@ class PostDetailViewModel @Inject constructor(
             result.onSuccess {
                 _uiState.update { it.copy(isDeletingPost = false, postDeleted = true) }
             }.onFailure { e ->
+                Log.e("DevJournal", "Delete post failed", e)
                 _uiState.update { it.copy(isDeletingPost = false, errorMessage = "Failed to delete post: ${e.message}") }
             }
         }
@@ -211,6 +229,7 @@ class PostDetailViewModel @Inject constructor(
             try {
                 deleteCommentUseCase(postId, commentId)
             } catch (e: Exception) {
+                Log.e("DevJournal", "Delete comment failed", e)
                 _uiState.update { it.copy(errorMessage = "Failed to delete comment: ${e.message}") }
             }
         }

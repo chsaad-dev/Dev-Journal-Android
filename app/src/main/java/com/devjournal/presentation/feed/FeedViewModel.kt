@@ -1,5 +1,6 @@
 package com.devjournal.presentation.feed
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devjournal.data.model.Post
@@ -39,7 +40,8 @@ data class FeedUiState(
     val bookmarkedPostIds: Set<String> = emptySet(),
     val selectedSortOption: FeedSortOption = FeedSortOption.LATEST,
     val authorNames: Map<String, String> = emptyMap(),
-    val authorPhotoUrls: Map<String, String> = emptyMap()
+    val authorPhotoUrls: Map<String, String> = emptyMap(),
+    val errorMessage: String? = null
 )
 
 @HiltViewModel
@@ -193,7 +195,8 @@ class FeedViewModel @Inject constructor(
             }
             try {
                 likePostUseCase(postId, uid, alreadyLiked)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.e("DevJournal", "Like action failed", e)
                 // Revert on error
                 _uiState.update { state ->
                     val reverted = if (alreadyLiked) {
@@ -201,7 +204,7 @@ class FeedViewModel @Inject constructor(
                     } else {
                         state.likedPostIds - postId
                     }
-                    state.copy(likedPostIds = reverted)
+                    state.copy(likedPostIds = reverted, errorMessage = "Like failed: ${e.message}")
                 }
             }
         }
@@ -221,7 +224,8 @@ class FeedViewModel @Inject constructor(
             }
             try {
                 bookmarkPostUseCase(postId, uid, alreadyBookmarked)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.e("DevJournal", "Bookmark action failed", e)
                 // Revert on error
                 _uiState.update { state ->
                     val reverted = if (alreadyBookmarked) {
@@ -229,7 +233,7 @@ class FeedViewModel @Inject constructor(
                     } else {
                         state.bookmarkedPostIds - postId
                     }
-                    state.copy(bookmarkedPostIds = reverted)
+                    state.copy(bookmarkedPostIds = reverted, errorMessage = "Bookmark failed: ${e.message}")
                 }
             }
         }

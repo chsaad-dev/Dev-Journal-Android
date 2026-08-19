@@ -528,6 +528,8 @@ fun PostDetailScreen(
                                     comment = comment,
                                     currentUserId = uiState.currentUserId,
                                     isAdmin = uiState.isAdmin,
+                                    commenterName = uiState.commenterNames[comment.userId],
+                                    commenterPhotoUrl = uiState.commenterPhotoUrls[comment.userId],
                                     onDelete = { commentIdToDelete = comment.id }
                                 )
                             }
@@ -546,6 +548,8 @@ fun CommentItem(
     comment: Comment,
     currentUserId: String?,
     isAdmin: Boolean,
+    commenterName: String?,
+    commenterPhotoUrl: String?,
     onDelete: () -> Unit
 ) {
     Surface(
@@ -565,12 +569,21 @@ fun CommentItem(
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = "Commenter Avatar",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(32.dp)
-                )
+                if (!commenterPhotoUrl.isNullOrBlank()) {
+                    coil.compose.AsyncImage(
+                        model = commenterPhotoUrl,
+                        contentDescription = "Commenter Avatar",
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = "Commenter Avatar",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(10.dp))
@@ -582,7 +595,7 @@ fun CommentItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (comment.userId.isNotBlank()) "User (${comment.userId.take(6)})" else "Developer",
+                        text = if (!commenterName.isNullOrBlank()) commenterName else if (comment.userId.isNotBlank()) "User (${comment.userId.take(6)})" else "Developer",
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface
                     )

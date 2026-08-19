@@ -2,6 +2,8 @@ package com.devjournal
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
+import com.google.firebase.auth.FirebaseAuth
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
@@ -35,6 +37,13 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         targetPostId = intent?.getStringExtra("postId")
+
+        FirebaseAuth.getInstance().currentUser?.getIdToken(false)?.addOnSuccessListener { result ->
+            Log.d("DevJournal", "Current user UID: ${FirebaseAuth.getInstance().currentUser?.uid}")
+            Log.d("DevJournal", "Current user claims: ${result.claims}")
+        }?.addOnFailureListener {
+            Log.e("DevJournal", "Failed to get token claims", it)
+        }
 
         setContent {
             DevJournalTheme {

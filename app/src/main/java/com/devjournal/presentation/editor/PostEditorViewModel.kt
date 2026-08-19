@@ -33,6 +33,7 @@ data class PostEditorUiState(
     val tags: List<String> = emptyList(),
     val coverImageUrl: String = "",
     val coverImagePublicId: String = "",
+    val pendingCoverUri: Uri? = null,
     val isUploadingCover: Boolean = false,
     val published: Boolean = true,
     val isSaving: Boolean = false,
@@ -190,26 +191,15 @@ class PostEditorViewModel @Inject constructor(
     }
 
     fun onCoverImageSelected(uri: Uri) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isUploadingCover = true, errorMessage = null) }
-            val result = cloudinaryUploader.uploadImage(uri)
-            result.onSuccess { secureUrl ->
-                _uiState.update {
-                    it.copy(
-                        coverImageUrl = secureUrl,
-                        isUploadingCover = false
-                    )
-                }
-                triggerAutoSave()
-            }.onFailure { error ->
-                _uiState.update {
-                    it.copy(
-                        isUploadingCover = false,
-                        errorMessage = "Cover upload failed: ${error.localizedMessage}"
-                    )
-                }
-            }
+        // Store the local URI only; upload happens on Save/Post
+        _uiState.update {
+            it.copy(
+                pendingCoverUri = uri,
+                coverImageUrl = uri.toString(),
+                errorMessage = null
+            )
         }
+        triggerAutoSave()
     }
 
     fun onPublishedToggle(value: Boolean) {
@@ -255,8 +245,26 @@ class PostEditorViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             try {
+                // Upload pending cover image to Cloudinary now (deferred from selection)
+                var finalCoverUrl = post.coverImageUrl
+                var finalCoverPublicId = post.coverImagePublicId
+                val pendingUri = state.pendingCoverUri
+                if (pendingUri != null) {
+                    _uiState.update { it.copy(isUploadingCover = true) }
+                    val uploadResult = cloudinaryUploader.uploadImage(pendingUri)
+                    uploadResult.onSuccess { secureUrl ->
+                        finalCoverUrl = secureUrl
+                        _uiState.update { it.copy(isUploadingCover = false, pendingCoverUri = null, coverImageUrl = secureUrl) }
+                    }.onFailure { error ->
+                        _uiState.update { it.copy(isSaving = false, isUploadingCover = false, errorMessage = "Cover upload failed: ${error.localizedMessage}") }
+                        return@launch
+                    }
+                }
+
+                val finalPost = post.copy(coverImageUrl = finalCoverUrl, coverImagePublicId = finalCoverPublicId)
+
                 if (state.isEditMode && !effectivePostId.isNullOrBlank()) {
-                    val result = updatePostUseCase(effectivePostId, post)
+                    val result = updatePostUseCase(effectivePostId, finalPost)
                     result.onSuccess {
                         _uiState.update { it.copy(isSaving = false) }
                         onSuccess()
@@ -264,7 +272,7 @@ class PostEditorViewModel @Inject constructor(
                         _uiState.update { it.copy(isSaving = false, errorMessage = "Failed to update: ${e.message}") }
                     }
                 } else {
-                    val result = createPostUseCase(post)
+                    val result = createPostUseCase(finalPost)
                     result.onSuccess { _ ->
                         if (state.published) {
                             try {
