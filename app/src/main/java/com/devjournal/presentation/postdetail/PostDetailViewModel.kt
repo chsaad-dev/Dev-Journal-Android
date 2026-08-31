@@ -18,6 +18,7 @@ import com.devjournal.domain.usecase.GetPostDetailUseCase
 import com.devjournal.domain.usecase.GetUserProfileUseCase
 import com.devjournal.domain.usecase.LikePostUseCase
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
+import com.devjournal.domain.usecase.RecordViewUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -60,6 +61,7 @@ class PostDetailViewModel @Inject constructor(
     private val deletePostUseCase: DeletePostUseCase,
     private val deleteCommentUseCase: DeleteCommentUseCase,
     private val notifyWorkerApi: NotifyWorkerApi,
+    private val recordViewUseCase: RecordViewUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -67,6 +69,8 @@ class PostDetailViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(PostDetailUiState())
     val uiState: StateFlow<PostDetailUiState> = _uiState.asStateFlow()
+
+    private var viewRecorded = false
 
     init {
         observePost()
@@ -117,6 +121,15 @@ class PostDetailViewModel @Inject constructor(
                     launch {
                         val profile = getUserProfileUseCase(user.uid)
                         _uiState.update { it.copy(isAdmin = profile?.role.equals("admin", ignoreCase = true)) }
+                    }
+                    // Record view once per screen visit
+                    if (!viewRecorded) {
+                        viewRecorded = true
+                        launch {
+                            try {
+                                recordViewUseCase(postId, user.uid)
+                            } catch (_: Exception) { /* non-critical */ }
+                        }
                     }
                     launch {
                         checkIfLikedUseCase(postId, user.uid)

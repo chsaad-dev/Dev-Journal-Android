@@ -247,6 +247,7 @@ class PostRepositoryImpl @Inject constructor(
             "readTimeMinutes" to readTime,
             "likeCount" to 0,
             "commentCount" to 0,
+            "viewCount" to 0,
             "createdAt" to FieldValue.serverTimestamp(),
             "updatedAt" to FieldValue.serverTimestamp()
         )
@@ -292,6 +293,19 @@ class PostRepositoryImpl @Inject constructor(
         snapshot.toObject(Post::class.java)
     } catch (e: Exception) {
         null
+    }
+
+    override suspend fun recordView(postId: String, uid: String) {
+        val postRef = firestore.collection("posts").document(postId)
+        val viewRef = postRef.collection("views").document(uid)
+
+        firestore.runTransaction { transaction ->
+            val viewDoc = transaction.get(viewRef)
+            if (!viewDoc.exists()) {
+                transaction.set(viewRef, mapOf("viewedAt" to FieldValue.serverTimestamp()))
+                transaction.update(postRef, "viewCount", FieldValue.increment(1))
+            }
+        }.await()
     }
 
     override fun getDraftsByAuthor(authorId: String): Flow<List<Post>> = callbackFlow {

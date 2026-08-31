@@ -18,5 +18,6 @@ data class Post(
     var published: Boolean = false,
     var readTimeMinutes: Int = 0,
     var likeCount: Int = 0,
-    var commentCount: Int = 0
+    var commentCount: Int = 0,
+    var viewCount: Int = 0
 )
