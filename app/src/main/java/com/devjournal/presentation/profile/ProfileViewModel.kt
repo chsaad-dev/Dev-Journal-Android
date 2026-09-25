@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.devjournal.data.model.Post
 import com.devjournal.data.model.UserProfile
 import com.devjournal.data.remote.CloudinaryUploader
+import com.devjournal.data.remote.NotifyWorkerApi
 import com.devjournal.domain.usecase.FollowUserUseCase
 import com.devjournal.domain.usecase.GetBookmarkedPostsUseCase
 import com.devjournal.domain.usecase.GetLikedPostsUseCase
@@ -61,6 +62,7 @@ class ProfileViewModel @Inject constructor(
     private val unfollowUserUseCase: UnfollowUserUseCase,
     private val isFollowingUseCase: IsFollowingUseCase,
     private val getRemoteDraftsUseCase: GetRemoteDraftsUseCase,
+    private val notifyWorkerApi: NotifyWorkerApi,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -201,6 +203,24 @@ class ProfileViewModel @Inject constructor(
                 unfollowUserUseCase(currentUid, targetUid)
             } else {
                 followUserUseCase(currentUid, targetUid)
+            }
+            
+            result.onSuccess {
+                // Send push notification on follow (not unfollow)
+                if (!currentlyFollowing) {
+                    val currentUserName = _uiState.value.profile?.name
+                        ?: observeAuthStateUseCase().firstOrNull()?.displayName
+                        ?: "Someone"
+                    launch {
+                        notifyWorkerApi.sendNotification(
+                            type = "follow",
+                            targetUid = targetUid,
+                            title = "$currentUserName started following you",
+                            body = "Tap to view their profile",
+                            data = mapOf("type" to "follow", "targetUid" to currentUid)
+                        )
+                    }
+                }
             }
             
             result.onFailure {

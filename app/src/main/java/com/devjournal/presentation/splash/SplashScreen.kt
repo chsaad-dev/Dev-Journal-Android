@@ -58,6 +58,7 @@ import kotlinx.coroutines.delay
 fun SplashScreen(
     viewModel: SplashViewModel = hiltViewModel(),
     initialPostId: String? = null,
+    initialTargetUid: String? = null,
     onNavigate: (String) -> Unit
 ) {
     var step by remember { mutableIntStateOf(0) }
@@ -112,6 +113,8 @@ fun SplashScreen(
         // Determine destination
         val target = if (!initialPostId.isNullOrBlank()) {
             "postdetail/$initialPostId"
+        } else if (!initialTargetUid.isNullOrBlank()) {
+            "profile?uid=$initialTargetUid"
         } else if (viewModel.isUserAuthenticated()) {
             "feed"
         } else {

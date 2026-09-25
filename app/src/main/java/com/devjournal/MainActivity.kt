@@ -21,6 +21,7 @@ import com.devjournal.presentation.editor.PostEditorScreen
 import com.devjournal.presentation.feed.FeedScreen
 import com.devjournal.presentation.notifications.NotificationsScreen
 import com.devjournal.presentation.postdetail.PostDetailScreen
+import com.devjournal.presentation.followlist.FollowListScreen
 import com.devjournal.presentation.profile.ProfileScreen
 import com.devjournal.presentation.settings.SettingsScreen
 import com.devjournal.presentation.search.SearchScreen
@@ -32,11 +33,13 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private var targetPostId by mutableStateOf<String?>(null)
+    private var targetUid by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         targetPostId = intent?.getStringExtra("postId")
+        targetUid = intent?.getStringExtra("targetUid")
 
         FirebaseAuth.getInstance().currentUser?.getIdToken(false)?.addOnSuccessListener { result ->
             Log.d("DevJournal", "Current user UID: ${FirebaseAuth.getInstance().currentUser?.uid}")
@@ -57,7 +60,16 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                LaunchedEffect(targetUid) {
+                    val currentTarget = targetUid
+                    if (!currentTarget.isNullOrBlank()) {
+                        navController.navigate("profile?uid=$currentTarget")
+                        targetUid = null
+                    }
+                }
+
                 val initialPostId = intent?.getStringExtra("postId")
+                val initialTargetUid = intent?.getStringExtra("targetUid")
 
                 NavHost(
                     navController = navController,
@@ -66,6 +78,7 @@ class MainActivity : ComponentActivity() {
                     composable("splash") {
                         SplashScreen(
                             initialPostId = initialPostId,
+                            initialTargetUid = initialTargetUid,
                             onNavigate = { destination ->
                                 navController.navigate(destination) {
                                     popUpTo("splash") { inclusive = true }
@@ -133,6 +146,28 @@ class MainActivity : ComponentActivity() {
                             },
                             onSettingsClick = {
                                 navController.navigate("settings")
+                            },
+                            onFollowersClick = { uid ->
+                                navController.navigate("followlist/$uid/followers")
+                            },
+                            onFollowingClick = { uid ->
+                                navController.navigate("followlist/$uid/following")
+                            },
+                            onBackClick = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+                    composable(
+                        route = "followlist/{uid}/{type}",
+                        arguments = listOf(
+                            navArgument("uid") { type = NavType.StringType },
+                            navArgument("type") { type = NavType.StringType }
+                        )
+                    ) {
+                        FollowListScreen(
+                            onUserClick = { userId ->
+                                navController.navigate("profile?uid=$userId")
                             },
                             onBackClick = {
                                 navController.popBackStack()
@@ -213,6 +248,10 @@ class MainActivity : ComponentActivity() {
         val postId = intent.getStringExtra("postId")
         if (!postId.isNullOrBlank()) {
             targetPostId = postId
+        }
+        val uid = intent.getStringExtra("targetUid")
+        if (!uid.isNullOrBlank()) {
+            targetUid = uid
         }
     }
 }

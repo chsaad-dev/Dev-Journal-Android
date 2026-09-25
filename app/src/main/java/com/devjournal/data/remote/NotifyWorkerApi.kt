@@ -24,7 +24,8 @@ class NotifyWorkerApi @Inject constructor(
         type: String,
         targetUid: String,
         title: String,
-        body: String
+        body: String,
+        data: Map<String, String>? = null
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val jsonPayload = JSONObject().apply {
@@ -32,6 +33,13 @@ class NotifyWorkerApi @Inject constructor(
                 put("targetUid", targetUid)
                 put("title", title)
                 put("body", body)
+                if (!data.isNullOrEmpty()) {
+                    val dataJson = JSONObject()
+                    data.forEach { (key, value) ->
+                        dataJson.put(key, value)
+                    }
+                    put("data", dataJson)
+                }
             }.toString()
 
             val requestBody = jsonPayload.toRequestBody(JSON_MEDIA_TYPE)

@@ -54,13 +54,17 @@ class DevJournalMessagingService : FirebaseMessagingService() {
             ?: message.data["body"]
             ?: ""
 
-        // Worker payload should include postId in a data block: {"postId": "..."}
+        // Worker payload may include postId or targetUid in data block
         val postId = message.data["postId"]
+        val targetUid = message.data["targetUid"] ?: message.data["uid"]
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             if (!postId.isNullOrBlank()) {
                 putExtra("postId", postId)
+            }
+            if (!targetUid.isNullOrBlank()) {
+                putExtra("targetUid", targetUid)
             }
         }
 
