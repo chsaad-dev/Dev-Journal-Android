@@ -27,4 +27,5 @@ interface PostRepository {
     fun getPostViewers(postId: String): Flow<List<com.devjournal.data.model.PostViewer>>
     suspend fun getDraftById(postId: String): Post?
     fun getDraftsByAuthor(authorId: String): Flow<List<Post>>
+    fun getFollowingFeedPosts(uid: String, limit: Int = 10): Flow<List<Post>>
 }

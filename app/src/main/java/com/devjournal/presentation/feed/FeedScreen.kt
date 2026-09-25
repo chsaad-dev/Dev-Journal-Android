@@ -285,19 +285,28 @@ fun FeedScreen(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             TabRow(
-                selectedTabIndex = if (uiState.selectedSortOption == FeedSortOption.LATEST) 0 else 1,
+                selectedTabIndex = when (uiState.selectedTab) {
+                    FeedTab.FOR_YOU -> 0
+                    FeedTab.TRENDING -> 1
+                    FeedTab.FOLLOWING -> 2
+                },
                 containerColor = MaterialTheme.colorScheme.background,
                 contentColor = MaterialTheme.colorScheme.primary
             ) {
                 Tab(
-                    selected = uiState.selectedSortOption == FeedSortOption.LATEST,
-                    onClick = { viewModel.onSortOptionSelected(FeedSortOption.LATEST) },
-                    text = { Text("Latest", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
+                    selected = uiState.selectedTab == FeedTab.FOR_YOU,
+                    onClick = { viewModel.onTabSelected(FeedTab.FOR_YOU) },
+                    text = { Text("For You", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
                 )
                 Tab(
-                    selected = uiState.selectedSortOption == FeedSortOption.TRENDING,
-                    onClick = { viewModel.onSortOptionSelected(FeedSortOption.TRENDING) },
+                    selected = uiState.selectedTab == FeedTab.TRENDING,
+                    onClick = { viewModel.onTabSelected(FeedTab.TRENDING) },
                     text = { Text("Trending", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
+                )
+                Tab(
+                    selected = uiState.selectedTab == FeedTab.FOLLOWING,
+                    onClick = { viewModel.onTabSelected(FeedTab.FOLLOWING) },
+                    text = { Text("Following", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
                 )
             }
 
@@ -348,13 +357,19 @@ fun FeedScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "No articles found",
+                            text = if (uiState.selectedTab == FeedTab.FOLLOWING) {
+                                if (uiState.currentUserId == null) "Sign in to see followed authors"
+                                else "No posts from followed creators"
+                            } else "No articles found",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Try switching to another category or check back later.",
+                            text = if (uiState.selectedTab == FeedTab.FOLLOWING) {
+                                if (uiState.currentUserId == null) "Log in and follow your favorite engineers to personalize your feed."
+                                else "Follow other engineers to see their latest posts here."
+                            } else "Try switching to another category or check back later.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center

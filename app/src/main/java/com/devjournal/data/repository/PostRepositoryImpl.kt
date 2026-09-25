@@ -353,6 +353,62 @@ class PostRepositoryImpl @Inject constructor(
         awaitClose { listener.remove() }
     }
 
+    override fun getFollowingFeedPosts(uid: String, limit: Int): Flow<List<Post>> = callbackFlow {
+        if (uid.isBlank()) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+
+        val postListeners = mutableListOf<com.google.firebase.firestore.ListenerRegistration>()
+        val chunkMap = java.util.concurrent.ConcurrentHashMap<Int, List<Post>>()
+
+        val followingListener = firestore.collection("users").document(uid)
+            .collection("following")
+            .addSnapshotListener { followingSnapshot, followingError ->
+                if (followingError != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+
+                postListeners.forEach { it.remove() }
+                postListeners.clear()
+                chunkMap.clear()
+
+                val followedUids = followingSnapshot?.documents?.mapNotNull { it.id } ?: emptyList()
+                if (followedUids.isEmpty()) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+
+                val chunks = followedUids.chunked(30)
+                chunks.forEachIndexed { index, chunk ->
+                    val listener = firestore.collection("posts")
+                        .whereEqualTo("published", true)
+                        .whereIn("authorId", chunk)
+                        .limit(limit.toLong())
+                        .addSnapshotListener { postSnapshot, postError ->
+                            if (postError == null) {
+                                val posts = postSnapshot?.toObjects(Post::class.java) ?: emptyList()
+                                chunkMap[index] = posts
+
+                                val allCombined = chunkMap.values.flatten()
+                                    .distinctBy { it.id }
+                                    .sortedByDescending { it.createdAt?.seconds ?: 0L }
+                                    .take(limit)
+                                trySend(allCombined)
+                            }
+                        }
+                    postListeners.add(listener)
+                }
+            }
+
+        awaitClose {
+            followingListener.remove()
+            postListeners.forEach { it.remove() }
+        }
+    }
+
     private fun generateSlug(title: String): String {
         val normalized = title.lowercase(java.util.Locale.ROOT)
             .replace(Regex("[^a-z0-9\\s-]"), "")

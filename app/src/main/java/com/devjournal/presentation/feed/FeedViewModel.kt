@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devjournal.data.model.Post
 import com.devjournal.domain.usecase.GetPostsUseCase
+import com.devjournal.domain.usecase.GetFollowingPostsUseCase
 import com.devjournal.domain.usecase.GetUserProfileUseCase
 import com.devjournal.domain.usecase.LikePostUseCase
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
@@ -27,9 +28,16 @@ enum class FeedSortOption {
     TRENDING
 }
 
+enum class FeedTab {
+    FOR_YOU,
+    TRENDING,
+    FOLLOWING
+}
+
 data class FeedUiState(
     val posts: List<Post> = emptyList(),
     val allPosts: List<Post> = emptyList(),
+    val followingPosts: List<Post> = emptyList(),
     val isLoading: Boolean = true,
     val selectedTag: String = "All",
     val availableTags: List<String> = listOf("All", "Android", "Compose", "Kotlin", "Architecture", "Firebase"),
@@ -38,6 +46,7 @@ data class FeedUiState(
     val currentUserPhotoUrl: String? = null,
     val likedPostIds: Set<String> = emptySet(),
     val bookmarkedPostIds: Set<String> = emptySet(),
+    val selectedTab: FeedTab = FeedTab.FOR_YOU,
     val selectedSortOption: FeedSortOption = FeedSortOption.LATEST,
     val authorNames: Map<String, String> = emptyMap(),
     val authorPhotoUrls: Map<String, String> = emptyMap(),
@@ -47,6 +56,7 @@ data class FeedUiState(
 @HiltViewModel
 class FeedViewModel @Inject constructor(
     private val getPostsUseCase: GetPostsUseCase,
+    private val getFollowingPostsUseCase: GetFollowingPostsUseCase,
     private val likePostUseCase: LikePostUseCase,
     private val bookmarkPostUseCase: BookmarkPostUseCase,
     private val observeAuthStateUseCase: ObserveAuthStateUseCase,
@@ -60,6 +70,7 @@ class FeedViewModel @Inject constructor(
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
     private var interactionsJob: Job? = null
     private var postsJob: Job? = null
+    private var followingPostsJob: Job? = null
     
     private val _postLimit = MutableStateFlow(10)
 
@@ -81,15 +92,18 @@ class FeedViewModel @Inject constructor(
                         )
                     }
                     observeInteractions(user.uid)
+                    observeFollowingPosts(user.uid, _postLimit.value)
                 } else {
                     interactionsJob?.cancel()
+                    followingPostsJob?.cancel()
                     _uiState.update {
                         it.copy(
                             currentUserId = null,
                             currentUserPhotoUrl = null,
                             isAdmin = false,
                             likedPostIds = emptySet(),
-                            bookmarkedPostIds = emptySet()
+                            bookmarkedPostIds = emptySet(),
+                            followingPosts = emptyList()
                         )
                     }
                 }
@@ -121,32 +135,20 @@ class FeedViewModel @Inject constructor(
         viewModelScope.launch {
             _postLimit.collect { limit ->
                 postsJob?.cancel()
+                val currentUid = _uiState.value.currentUserId
+                if (currentUid != null) {
+                    observeFollowingPosts(currentUid, limit)
+                }
                 postsJob = launch {
                     getPostsUseCase(limit).collect { postsList ->
-                        val currentNames = _uiState.value.authorNames.toMutableMap()
-                        val currentPhotos = _uiState.value.authorPhotoUrls.toMutableMap()
-                        val missingIds = postsList.map { it.authorId }.distinct().filter { !currentNames.containsKey(it) && it.isNotBlank() }
-                        
-                        missingIds.forEach { uid ->
-                            val profile = getUserProfileUseCase(uid)
-                            if (profile != null) {
-                                if (profile.name.isNotBlank()) {
-                                    currentNames[uid] = profile.name
-                                }
-                                if (profile.photoUrl.isNotBlank()) {
-                                    currentPhotos[uid] = profile.photoUrl
-                                }
-                            }
-                        }
+                        resolveMissingAuthors(postsList)
 
                         _uiState.update { state ->
-                            val filteredAndSorted = filterAndSortPosts(postsList, state.selectedTag, state.selectedSortOption)
+                            val filteredAndSorted = filterAndSortPosts(postsList, state.selectedTag, state.selectedTab)
                             state.copy(
                                 allPosts = postsList,
-                                posts = filteredAndSorted,
-                                authorNames = currentNames,
-                                authorPhotoUrls = currentPhotos,
-                                isLoading = false
+                                posts = if (state.selectedTab != FeedTab.FOLLOWING) filteredAndSorted else state.posts,
+                                isLoading = if (state.selectedTab != FeedTab.FOLLOWING) false else state.isLoading
                             )
                         }
                     }
@@ -155,27 +157,71 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    private fun observeFollowingPosts(uid: String, limit: Int) {
+        followingPostsJob?.cancel()
+        followingPostsJob = viewModelScope.launch {
+            getFollowingPostsUseCase(uid, limit).collect { postsList ->
+                resolveMissingAuthors(postsList)
+                _uiState.update { state ->
+                    val filteredAndSorted = filterAndSortPosts(postsList, state.selectedTag, state.selectedTab)
+                    state.copy(
+                        followingPosts = postsList,
+                        posts = if (state.selectedTab == FeedTab.FOLLOWING) filteredAndSorted else state.posts,
+                        isLoading = if (state.selectedTab == FeedTab.FOLLOWING) false else state.isLoading
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun resolveMissingAuthors(postsList: List<Post>) {
+        val currentNames = _uiState.value.authorNames.toMutableMap()
+        val currentPhotos = _uiState.value.authorPhotoUrls.toMutableMap()
+        val missingIds = postsList.map { it.authorId }.distinct().filter { !currentNames.containsKey(it) && it.isNotBlank() }
+        
+        missingIds.forEach { uid ->
+            val profile = getUserProfileUseCase(uid)
+            if (profile != null) {
+                if (profile.name.isNotBlank()) {
+                    currentNames[uid] = profile.name
+                }
+                if (profile.photoUrl.isNotBlank()) {
+                    currentPhotos[uid] = profile.photoUrl
+                }
+            }
+        }
+        _uiState.update { it.copy(authorNames = currentNames, authorPhotoUrls = currentPhotos) }
+    }
+
     fun loadMorePosts() {
         _postLimit.update { it + 10 }
     }
 
-    fun onTagSelected(tag: String) {
+    fun onTabSelected(tab: FeedTab) {
+        if (_uiState.value.selectedTab == tab) return
+        
         _uiState.update { state ->
-            val filteredAndSorted = filterAndSortPosts(state.allPosts, tag, state.selectedSortOption)
+            val sourcePosts = if (tab == FeedTab.FOLLOWING) state.followingPosts else state.allPosts
+            val filteredAndSorted = filterAndSortPosts(sourcePosts, state.selectedTag, tab)
             state.copy(
-                selectedTag = tag,
+                selectedTab = tab,
+                selectedSortOption = if (tab == FeedTab.TRENDING) FeedSortOption.TRENDING else FeedSortOption.LATEST,
                 posts = filteredAndSorted
             )
         }
     }
-    
+
     fun onSortOptionSelected(option: FeedSortOption) {
-        if (_uiState.value.selectedSortOption == option) return
-        
+        val tab = if (option == FeedSortOption.TRENDING) FeedTab.TRENDING else FeedTab.FOR_YOU
+        onTabSelected(tab)
+    }
+
+    fun onTagSelected(tag: String) {
         _uiState.update { state ->
-            val filteredAndSorted = filterAndSortPosts(state.allPosts, state.selectedTag, option)
+            val sourcePosts = if (state.selectedTab == FeedTab.FOLLOWING) state.followingPosts else state.allPosts
+            val filteredAndSorted = filterAndSortPosts(sourcePosts, tag, state.selectedTab)
             state.copy(
-                selectedSortOption = option,
+                selectedTag = tag,
                 posts = filteredAndSorted
             )
         }
@@ -244,12 +290,12 @@ class FeedViewModel @Inject constructor(
             try {
                 deletePostUseCase(postId)
             } catch (e: Exception) {
-                // Should show error to user in a real app
+                // Error handling
             }
         }
     }
 
-    private fun filterAndSortPosts(posts: List<Post>, tag: String, sortOption: FeedSortOption): List<Post> {
+    private fun filterAndSortPosts(posts: List<Post>, tag: String, tab: FeedTab): List<Post> {
         val filtered = if (tag.equals("All", ignoreCase = true)) {
             posts
         } else {
@@ -258,9 +304,10 @@ class FeedViewModel @Inject constructor(
             }
         }
         
-        return when (sortOption) {
-            FeedSortOption.LATEST -> filtered.sortedByDescending { it.createdAt }
-            FeedSortOption.TRENDING -> filtered.sortedByDescending { it.likeCount + it.commentCount }
+        return when (tab) {
+            FeedTab.FOR_YOU -> filtered.sortedByDescending { it.createdAt?.seconds ?: 0L }
+            FeedTab.TRENDING -> filtered.sortedByDescending { it.likeCount + it.commentCount }
+            FeedTab.FOLLOWING -> filtered.sortedByDescending { it.createdAt?.seconds ?: 0L }
         }
     }
 }
