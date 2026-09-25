@@ -88,4 +88,31 @@ class UserRepositoryImpl @Inject constructor(
         
         awaitClose { subscription.remove() }
     }
+
+    override suspend fun getFollowers(uid: String): List<UserProfile> {
+        return fetchRelatedUsers(uid, "followers")
+    }
+
+    override suspend fun getFollowing(uid: String): List<UserProfile> {
+        return fetchRelatedUsers(uid, "following")
+    }
+
+    private suspend fun fetchRelatedUsers(uid: String, subcollection: String): List<UserProfile> {
+        val snapshot = firestore.collection("users").document(uid)
+            .collection(subcollection)
+            .get()
+            .await()
+
+        val relatedUids = snapshot.documents.mapNotNull { it.id }
+        if (relatedUids.isEmpty()) return emptyList()
+
+        // Firestore whereIn supports max 30 items, batch if needed
+        return relatedUids.chunked(30).flatMap { batch ->
+            val usersSnapshot = firestore.collection("users")
+                .whereIn(com.google.firebase.firestore.FieldPath.documentId(), batch)
+                .get()
+                .await()
+            usersSnapshot.documents.mapNotNull { it.toObject(UserProfile::class.java) }
+        }
+    }
 }

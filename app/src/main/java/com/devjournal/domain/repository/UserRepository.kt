@@ -9,4 +9,6 @@ interface UserRepository {
     suspend fun followUser(currentUid: String, targetUid: String): Result<Unit>
     suspend fun unfollowUser(currentUid: String, targetUid: String): Result<Unit>
     fun isFollowing(currentUid: String, targetUid: String): kotlinx.coroutines.flow.Flow<Boolean>
+    suspend fun getFollowers(uid: String): List<UserProfile>
+    suspend fun getFollowing(uid: String): List<UserProfile>
 }

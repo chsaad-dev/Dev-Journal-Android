@@ -41,6 +41,8 @@ fun ProfileScreen(
     onPostClick: (String) -> Unit,
     onDraftClick: (String) -> Unit = {},
     onSettingsClick: () -> Unit,
+    onFollowersClick: (String) -> Unit = {},
+    onFollowingClick: (String) -> Unit = {},
     onBackClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -246,7 +248,7 @@ fun ProfileScreen(
                             ) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.clickable { /* TODO: navigate to followers list */ }.padding(horizontal = 16.dp, vertical = 8.dp)
+                                    modifier = Modifier.clickable { onFollowersClick(uiState.targetUid.ifBlank { profile?.uid ?: "" }) }.padding(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
                                     Text(
                                         text = uiState.followerCount.toString(),
@@ -266,7 +268,7 @@ fun ProfileScreen(
                                 
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.clickable { /* TODO: navigate to following list */ }.padding(horizontal = 16.dp, vertical = 8.dp)
+                                    modifier = Modifier.clickable { onFollowingClick(uiState.targetUid.ifBlank { profile?.uid ?: "" }) }.padding(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
                                     Text(
                                         text = uiState.followingCount.toString(),
