@@ -291,19 +291,23 @@ fun PostCard(
 
                         Spacer(modifier = Modifier.width(16.dp))
 
-                        // View Count
-                        Icon(
-                            imageVector = Icons.Outlined.Visibility,
-                            contentDescription = "Views",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "${post.viewCount}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        // View Count (Social style)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Visibility,
+                                contentDescription = "Views",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = formatPostCount(post.viewCount),
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     // Bookmark and Share Buttons
@@ -344,5 +348,13 @@ private fun formatTimestamp(timeMs: Long?): String {
         hours < 24 -> "${hours}h ago"
         days < 7 -> "${days}d ago"
         else -> SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(timeMs)
+    }
+}
+
+private fun formatPostCount(count: Int): String {
+    return when {
+        count >= 1_000_000 -> String.format(Locale.getDefault(), "%.1fM", count / 1_000_000.0)
+        count >= 1_000 -> String.format(Locale.getDefault(), "%.1fK", count / 1_000.0)
+        else -> count.toString()
     }
 }

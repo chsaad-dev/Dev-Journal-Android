@@ -23,7 +23,8 @@ interface PostRepository {
     suspend fun createPost(post: Post): Result<String>
     suspend fun updatePost(postId: String, post: Post): Result<Unit>
     suspend fun deletePost(postId: String): Result<Unit>
-    suspend fun recordView(postId: String, uid: String)
+    suspend fun recordView(postId: String, uid: String, userName: String? = null, userPhotoUrl: String? = null)
+    fun getPostViewers(postId: String): Flow<List<com.devjournal.data.model.PostViewer>>
     suspend fun getDraftById(postId: String): Post?
     fun getDraftsByAuthor(authorId: String): Flow<List<Post>>
 }

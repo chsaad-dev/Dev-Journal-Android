@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devjournal.data.model.Comment
 import com.devjournal.data.model.Post
+import com.devjournal.data.model.PostViewer
 import com.devjournal.data.remote.NotifyWorkerApi
 import com.devjournal.domain.usecase.AddCommentUseCase
 import com.devjournal.domain.usecase.BookmarkPostUseCase
@@ -15,6 +16,7 @@ import com.devjournal.domain.usecase.DeleteCommentUseCase
 import com.devjournal.domain.usecase.DeletePostUseCase
 import com.devjournal.domain.usecase.GetCommentsUseCase
 import com.devjournal.domain.usecase.GetPostDetailUseCase
+import com.devjournal.domain.usecase.GetPostViewersUseCase
 import com.devjournal.domain.usecase.GetUserProfileUseCase
 import com.devjournal.domain.usecase.LikePostUseCase
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
@@ -44,8 +46,14 @@ data class PostDetailUiState(
     val authorName: String = "",
     val authorPhotoUrl: String = "",
     val commenterNames: Map<String, String> = emptyMap(),
-    val commenterPhotoUrls: Map<String, String> = emptyMap()
-)
+    val commenterPhotoUrls: Map<String, String> = emptyMap(),
+    val viewers: List<PostViewer> = emptyList(),
+    val isViewersSheetOpen: Boolean = false,
+    val isLoadingViewers: Boolean = false
+) {
+    val canViewReadersList: Boolean
+        get() = isAdmin || (post != null && currentUserId != null && post.authorId == currentUserId)
+}
 
 @HiltViewModel
 class PostDetailViewModel @Inject constructor(
@@ -62,6 +70,7 @@ class PostDetailViewModel @Inject constructor(
     private val deleteCommentUseCase: DeleteCommentUseCase,
     private val notifyWorkerApi: NotifyWorkerApi,
     private val recordViewUseCase: RecordViewUseCase,
+    private val getPostViewersUseCase: GetPostViewersUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -121,13 +130,17 @@ class PostDetailViewModel @Inject constructor(
                     launch {
                         val profile = getUserProfileUseCase(user.uid)
                         _uiState.update { it.copy(isAdmin = profile?.role.equals("admin", ignoreCase = true)) }
-                    }
-                    // Record view once per screen visit
-                    if (!viewRecorded) {
-                        viewRecorded = true
-                        launch {
+
+                        // Record view once per screen visit with user profile details
+                        if (!viewRecorded) {
+                            viewRecorded = true
                             try {
-                                recordViewUseCase(postId, user.uid)
+                                recordViewUseCase(
+                                    postId = postId,
+                                    uid = user.uid,
+                                    userName = profile?.name,
+                                    userPhotoUrl = profile?.photoUrl
+                                )
                             } catch (_: Exception) { /* non-critical */ }
                         }
                     }
@@ -150,6 +163,20 @@ class PostDetailViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun onOpenViewersSheet() {
+        if (!_uiState.value.canViewReadersList) return
+        _uiState.update { it.copy(isViewersSheetOpen = true, isLoadingViewers = true) }
+        viewModelScope.launch {
+            getPostViewersUseCase(postId).collect { viewersList ->
+                _uiState.update { it.copy(viewers = viewersList, isLoadingViewers = false) }
+            }
+        }
+    }
+
+    fun onCloseViewersSheet() {
+        _uiState.update { it.copy(isViewersSheetOpen = false) }
     }
 
     fun onLikeClick() {

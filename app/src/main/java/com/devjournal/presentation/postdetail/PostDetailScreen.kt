@@ -498,17 +498,42 @@ fun PostDetailScreen(
 
                         Spacer(modifier = Modifier.width(20.dp))
 
-                        Icon(
-                            imageVector = Icons.Outlined.Visibility,
-                            contentDescription = "Views",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "${post.viewCount} views",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        // Views indicator (Clickable for author / admin to open "Read by" sheet)
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (uiState.canViewReadersList) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else Color.Transparent,
+                            modifier = Modifier.clickable {
+                                if (uiState.canViewReadersList) {
+                                    viewModel.onOpenViewersSheet()
+                                } else {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "View count is public. Detailed reader list is visible to author & admins.",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Visibility,
+                                    contentDescription = "Views",
+                                    tint = if (uiState.canViewReadersList) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "${post.viewCount} views",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = if (uiState.canViewReadersList) FontWeight.SemiBold else FontWeight.Normal
+                                    ),
+                                    color = if (uiState.canViewReadersList) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
@@ -555,6 +580,18 @@ fun PostDetailScreen(
                 }
             }
         }
+    }
+
+    if (uiState.isViewersSheetOpen) {
+        ReadByBottomSheet(
+            viewers = uiState.viewers,
+            isLoading = uiState.isLoadingViewers,
+            onDismissRequest = { viewModel.onCloseViewersSheet() },
+            onUserClick = { uid ->
+                viewModel.onCloseViewersSheet()
+                onAuthorClick(uid)
+            }
+        )
     }
 }
 

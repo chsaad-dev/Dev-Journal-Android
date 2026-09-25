@@ -1,6 +1,7 @@
 package com.devjournal.data.repository
 
 import com.devjournal.data.model.Post
+import com.devjournal.data.model.PostViewer
 import com.devjournal.domain.repository.PostRepository
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -295,17 +296,44 @@ class PostRepositoryImpl @Inject constructor(
         null
     }
 
-    override suspend fun recordView(postId: String, uid: String) {
+    override suspend fun recordView(postId: String, uid: String, userName: String?, userPhotoUrl: String?) {
         val postRef = firestore.collection("posts").document(postId)
         val viewRef = postRef.collection("views").document(uid)
 
         firestore.runTransaction { transaction ->
             val viewDoc = transaction.get(viewRef)
             if (!viewDoc.exists()) {
-                transaction.set(viewRef, mapOf("viewedAt" to FieldValue.serverTimestamp()))
+                val viewData = mutableMapOf<String, Any>(
+                    "viewedAt" to FieldValue.serverTimestamp()
+                )
+                if (!userName.isNullOrBlank()) {
+                    viewData["userName"] = userName
+                }
+                if (!userPhotoUrl.isNullOrBlank()) {
+                    viewData["userPhotoUrl"] = userPhotoUrl
+                }
+                transaction.set(viewRef, viewData)
                 transaction.update(postRef, "viewCount", FieldValue.increment(1))
             }
         }.await()
+    }
+
+    override fun getPostViewers(postId: String): Flow<List<PostViewer>> = callbackFlow {
+        val listener = firestore.collection("posts").document(postId)
+            .collection("views")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val viewers = snapshot?.documents?.mapNotNull { doc ->
+                    val viewer = doc.toObject(PostViewer::class.java) ?: return@mapNotNull null
+                    viewer.uid = doc.id
+                    viewer
+                }?.sortedByDescending { it.viewedAt?.toDate()?.time ?: 0L } ?: emptyList()
+                trySend(viewers)
+            }
+        awaitClose { listener.remove() }
     }
 
     override fun getDraftsByAuthor(authorId: String): Flow<List<Post>> = callbackFlow {
