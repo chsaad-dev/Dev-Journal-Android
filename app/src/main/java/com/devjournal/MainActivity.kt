@@ -1,6 +1,7 @@
 package com.devjournal
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
@@ -41,6 +42,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        enableHighRefreshRate()
         targetPostId = intent?.getStringExtra("postId")
         targetUid = intent?.getStringExtra("targetUid")
 
@@ -294,6 +296,31 @@ class MainActivity : ComponentActivity() {
         val uid = intent.getStringExtra("targetUid")
         if (!uid.isNullOrBlank()) {
             targetUid = uid
+        }
+    }
+
+    private fun enableHighRefreshRate() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val currentDisplay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    display
+                } else {
+                    @Suppress("DEPRECATION")
+                    windowManager.defaultDisplay
+                }
+                val modes = currentDisplay?.supportedModes ?: emptyArray()
+                val maxMode = modes.maxByOrNull { it.refreshRate }
+                if (maxMode != null && maxMode.refreshRate > 60f) {
+                    val params = window.attributes
+                    params.preferredDisplayModeId = maxMode.modeId
+                    window.attributes = params
+                }
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.setPreferMinimalPostProcessing(true)
+            }
+        } catch (e: Exception) {
+            Log.w("DevJournal", "Could not set high refresh rate: ${e.message}")
         }
     }
 }
