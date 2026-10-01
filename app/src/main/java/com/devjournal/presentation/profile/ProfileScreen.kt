@@ -7,7 +7,19 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -17,13 +29,42 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -33,6 +74,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.devjournal.data.model.Post
+import com.devjournal.presentation.components.BottomImageScrim
+import com.devjournal.ui.theme.BorderSubtleDark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +84,7 @@ fun ProfileScreen(
     onPostClick: (String) -> Unit,
     onDraftClick: (String) -> Unit = {},
     onSettingsClick: () -> Unit,
+    onEditProfileClick: () -> Unit = {},
     onFollowersClick: (String) -> Unit = {},
     onFollowingClick: (String) -> Unit = {},
     onBackClick: () -> Unit = {}
@@ -48,13 +92,6 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     val profile = uiState.profile
 
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri ->
-            uri?.let { viewModel.onPhotoSelected(it) }
-        }
-    )
-    
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("Liked", "Saved", "Drafts")
 
@@ -79,8 +116,9 @@ fun ProfileScreen(
                     if (uiState.isOwnProfile) {
                         IconButton(onClick = onSettingsClick) {
                             Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "Settings"
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = "Settings",
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -107,7 +145,7 @@ fun ProfileScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .background(MaterialTheme.colorScheme.background),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 16.dp),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -117,16 +155,23 @@ fun ProfileScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Avatar with Camera Edit Icon Overlay
+                        // Avatar with elevated camera button & border ring
                         Box(
-                            modifier = Modifier.size(104.dp),
+                            modifier = Modifier
+                                .size(108.dp)
+                                .then(
+                                    if (uiState.isOwnProfile) {
+                                        Modifier.clickable { onEditProfileClick() }
+                                    } else Modifier
+                                ),
                             contentAlignment = Alignment.BottomEnd
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(96.dp)
+                                    .size(100.dp)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
                                     .align(Alignment.TopCenter),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -144,33 +189,124 @@ fun ProfileScreen(
                                     )
                                 } else {
                                     Icon(
-                                        imageVector = Icons.Default.Person,
+                                        imageVector = Icons.Outlined.Person,
                                         contentDescription = "Default Avatar",
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        modifier = Modifier.size(64.dp)
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(54.dp)
                                     )
                                 }
                             }
 
-                            // Camera icon overlay
+                            // Camera Edit Badge with elevated container and crisp outline ring
                             if (uiState.isOwnProfile) {
-                                Box(
+                                Surface(
                                     modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primaryContainer)
-                                        .clickable {
-                                            photoPickerLauncher.launch(
-                                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                            )
-                                        },
-                                    contentAlignment = Alignment.Center
+                                        .size(32.dp)
+                                        .border(2.dp, MaterialTheme.colorScheme.background, CircleShape),
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shadowElevation = 6.dp
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CameraAlt,
-                                        contentDescription = "Change Profile Picture",
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        modifier = Modifier.size(16.dp)
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.CameraAlt,
+                                            contentDescription = "Edit Profile",
+                                            tint = MaterialTheme.colorScheme.onPrimary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // User Name
+                        Text(
+                            text = profile?.name?.ifBlank { "DevJournal Author" } ?: "DevJournal Author",
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        // Email / Handle
+                        if (!profile?.email.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = profile?.email ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Bio
+                        if (!profile?.bio.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = profile?.bio ?: "",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 24.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        // Followers & Following Counters Card
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth(0.9f)
+                                .border(1.dp, BorderSubtleDark, RoundedCornerShape(14.dp)),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .clickable { onFollowersClick(uiState.targetUid.ifBlank { profile?.uid ?: "" }) }
+                                        .padding(horizontal = 16.dp)
+                                ) {
+                                    Text(
+                                        text = uiState.followerCount.toString(),
+                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Followers",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                VerticalDivider(
+                                    modifier = Modifier.height(30.dp).width(1.dp),
+                                    color = BorderSubtleDark
+                                )
+
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .clickable { onFollowingClick(uiState.targetUid.ifBlank { profile?.uid ?: "" }) }
+                                        .padding(horizontal = 16.dp)
+                                ) {
+                                    Text(
+                                        text = uiState.followingCount.toString(),
+                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Following",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -178,165 +314,86 @@ fun ProfileScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        if (uiState.isEditing) {
-                            OutlinedTextField(
-                                value = uiState.editName,
-                                onValueChange = viewModel::onNameChange,
-                                label = { Text("Name") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(0.8f)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedTextField(
-                                value = uiState.editBio,
-                                onValueChange = viewModel::onBioChange,
-                                label = { Text("Bio") },
-                                modifier = Modifier.fillMaxWidth(0.8f),
-                                maxLines = 3
-                            )
-                            uiState.errorMessage?.let { msg ->
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = msg,
-                                    color = MaterialTheme.colorScheme.error,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        // Action Button (Edit Profile for own profile, Follow/Unfollow for others)
+                        if (uiState.isOwnProfile) {
+                            OutlinedButton(
+                                onClick = onEditProfileClick,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp),
+                                shape = RoundedCornerShape(20.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
                             ) {
-                                OutlinedButton(onClick = viewModel::onCancelEdit) {
-                                    Text("Cancel")
-                                }
-                                Button(onClick = viewModel::onSaveClick) {
-                                    Text("Save")
-                                }
+                                Icon(
+                                    imageVector = Icons.Outlined.Edit,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Edit Profile",
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+                                )
                             }
                         } else {
-                            Text(
-                                text = profile?.name?.ifBlank { "DevJournal Author" } ?: "DevJournal Author",
-                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            if (!profile?.email.isNullOrBlank()) {
-                                Text(
-                                    text = profile?.email ?: "",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                            }
-                            if (!profile?.bio.isNullOrBlank()) {
-                                Text(
-                                    text = profile?.bio ?: "",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 24.dp)
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            // Follower Stats
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.clickable { onFollowersClick(uiState.targetUid.ifBlank { profile?.uid ?: "" }) }.padding(horizontal = 16.dp, vertical = 8.dp)
-                                ) {
-                                    Text(
-                                        text = uiState.followerCount.toString(),
-                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                                    )
-                                    Text(
-                                        text = "Followers",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                
-                                VerticalDivider(
-                                    modifier = Modifier.height(32.dp).width(1.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
-                                
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.clickable { onFollowingClick(uiState.targetUid.ifBlank { profile?.uid ?: "" }) }.padding(horizontal = 16.dp, vertical = 8.dp)
-                                ) {
-                                    Text(
-                                        text = uiState.followingCount.toString(),
-                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                                    )
-                                    Text(
-                                        text = "Following",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            if (uiState.isOwnProfile) {
+                            if (uiState.isFollowing) {
                                 OutlinedButton(
-                                    onClick = viewModel::onEditClick,
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                                    onClick = viewModel::onFollowClick,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp),
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                    )
                                 ) {
-                                    Text("Edit Profile")
+                                    Text("Following")
                                 }
                             } else {
-                                if (uiState.isFollowing) {
-                                    OutlinedButton(
-                                        onClick = viewModel::onFollowClick,
-                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                                        )
-                                    ) {
-                                        Text("Following")
-                                    }
-                                } else {
-                                    Button(
-                                        onClick = viewModel::onFollowClick,
-                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                    ) {
-                                        Text("Follow")
-                                    }
+                                Button(
+                                    onClick = viewModel::onFollowClick,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp),
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                ) {
+                                    Text("Follow")
                                 }
                             }
                         }
-                        
-                        Spacer(modifier = Modifier.height(24.dp))
-                        
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // Tabs Row (Liked, Saved, Drafts)
                         if (uiState.isOwnProfile) {
                             SecondaryTabRow(
                                 selectedTabIndex = selectedTabIndex,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                containerColor = MaterialTheme.colorScheme.background,
+                                divider = { HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp) }
                             ) {
                                 tabs.forEachIndexed { index, title ->
                                     Tab(
                                         selected = selectedTabIndex == index,
                                         onClick = { selectedTabIndex = index },
-                                        text = { Text(title) }
+                                        text = {
+                                            Text(
+                                                text = title,
+                                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
+                                            )
+                                        }
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
                 }
 
+                // Grid Content Items
                 if (uiState.isOwnProfile) {
                     val isDrafts = selectedTabIndex == 2
                     val postsToShow = if (selectedTabIndex == 0) uiState.likedPosts else uiState.bookmarkedPosts
@@ -344,138 +401,135 @@ fun ProfileScreen(
 
                     if ((!isDrafts && postsToShow.isEmpty()) || (isDrafts && draftsToShow.isEmpty())) {
                         item(span = { GridItemSpan(2) }) {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
-                                contentAlignment = Alignment.Center
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 24.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
                             ) {
-                                Text(
-                                    text = if (isDrafts) "No drafts yet." else if (selectedTabIndex == 0) "No liked posts yet." else "No saved posts yet.",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Box(
+                                    modifier = Modifier.padding(24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (isDrafts) "No saved drafts yet." else if (selectedTabIndex == 0) "No liked articles yet." else "No saved articles yet.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     } else if (isDrafts) {
                         items(draftsToShow) { draft ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(1f)
-                                    .clickable { onDraftClick(draft.id) },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                )
-                            ) {
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    if (draft.coverImageUrl.isNotBlank()) {
-                                        AsyncImage(
-                                            model = draft.coverImageUrl,
-                                            contentDescription = null,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .background(
-                                                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                                                        colors = listOf(
-                                                            androidx.compose.ui.graphics.Color.Transparent,
-                                                            androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.7f)
-                                                        ),
-                                                        startY = 100f
-                                                    )
-                                                )
-                                        )
-                                    }
-                                    Column(
-                                        modifier = Modifier
-                                            .align(Alignment.BottomStart)
-                                            .padding(12.dp)
-                                    ) {
-                                        Text(
-                                            text = draft.title.ifBlank { "Untitled Draft" },
-                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = if (draft.coverImageUrl.isNotBlank()) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = "Draft",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            maxLines = 1
-                                        )
-                                    }
-                                }
-                            }
+                            ProfilePostGridCard(
+                                post = draft,
+                                badgeText = "Draft",
+                                onClick = { onDraftClick(draft.id) }
+                            )
                         }
                     } else {
                         items(postsToShow) { post ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(1f)
-                                    .clickable { onPostClick(post.id) },
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                )
-                            ) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    if (post.coverImageUrl.isNotBlank()) {
-                                        AsyncImage(
-                                            model = post.coverImageUrl,
-                                            contentDescription = null,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                        // Gradient overlay
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .background(
-                                                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                                                        colors = listOf(
-                                                            androidx.compose.ui.graphics.Color.Transparent,
-                                                            androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.7f)
-                                                        ),
-                                                        startY = 100f
-                                                    )
-                                                )
-                                        )
-                                    }
-
-                                    Column(
-                                        modifier = Modifier
-                                            .align(Alignment.BottomStart)
-                                            .padding(12.dp)
-                                    ) {
-                                        Text(
-                                            text = post.title,
-                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = if (post.coverImageUrl.isNotBlank()) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = post.excerpt,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = if (post.coverImageUrl.isNotBlank()) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
-                            }
+                            ProfilePostGridCard(
+                                post = post,
+                                badgeText = post.tags.firstOrNull(),
+                                onClick = { onPostClick(post.id) }
+                            )
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Standardized 1:1 Aspect Ratio Grid Card for Profile tab items,
+ * featuring fallback gradient meshes and bottom gradient scrims.
+ */
+@Composable
+fun ProfilePostGridCard(
+    post: Post,
+    badgeText: String? = null,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(14.dp))
+            .border(1.dp, BorderSubtleDark, RoundedCornerShape(14.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (post.coverImageUrl.isNotBlank()) {
+                AsyncImage(
+                    model = post.coverImageUrl,
+                    contentDescription = post.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                // Bottom scrim
+                BottomImageScrim(
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    height = 90.dp,
+                    maxAlpha = 0.88f
+                )
+            } else {
+                // Sleek obsidian dark gradient fallback
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    MaterialTheme.colorScheme.surfaceContainerLowest
+                                )
+                            )
+                        )
+                )
+            }
+
+            // Tag/Badge overlay at top
+            if (!badgeText.isNullOrBlank()) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(10.dp),
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color.Black.copy(alpha = 0.65f)
+                ) {
+                    Text(
+                        text = if (badgeText.startsWith("#")) badgeText else "#$badgeText",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            // Title & Excerpt at bottom
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = post.title.ifBlank { "Untitled Article" },
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 18.sp
+                    ),
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
