@@ -391,8 +391,8 @@ fun LoginScreen(
                     trailingIcon = {
                         IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                             Icon(
-                                imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = if (isPasswordVisible) "Hide Password" else "Show Password",
+                                imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = if (isPasswordVisible) "Password visible" else "Password hidden",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -444,8 +444,8 @@ fun LoginScreen(
                             trailingIcon = {
                                 IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
                                     Icon(
-                                        imageVector = if (isConfirmPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                        contentDescription = if (isConfirmPasswordVisible) "Hide Password" else "Show Password",
+                                        imageVector = if (isConfirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = if (isConfirmPasswordVisible) "Password visible" else "Password hidden",
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
