@@ -27,6 +27,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Person
@@ -117,17 +120,26 @@ fun EditProfileScreen(
                                 Toast.makeText(context, "Username cannot be empty", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
+                            if (uiState.usernameAvailability == UsernameAvailability.TAKEN) {
+                                Toast.makeText(context, "Username is already taken", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
                             viewModel.onSaveClick(onSuccess = {
                                 Toast.makeText(context, "Profile updated successfully", Toast.LENGTH_SHORT).show()
                                 onBackClick()
                             })
                         },
-                        enabled = !uiState.isCheckingUsername,
+                        enabled = !uiState.isCheckingUsername &&
+                                uiState.usernameAvailability != UsernameAvailability.TAKEN &&
+                                uiState.usernameAvailability != UsernameAvailability.TOO_SHORT &&
+                                uiState.editName.trim().isNotBlank(),
                         shape = RoundedCornerShape(20.dp),
                         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                         )
                     ) {
                         if (uiState.isCheckingUsername) {
@@ -285,7 +297,7 @@ fun EditProfileScreen(
                         )
                     }
 
-                    // Username Field
+                    // Username Field with Live Availability Indicator
                     Column {
                         Text(
                             text = "USERNAME",
@@ -301,32 +313,98 @@ fun EditProfileScreen(
                                 Text(
                                     text = "@",
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = when (uiState.usernameAvailability) {
+                                        UsernameAvailability.AVAILABLE -> Color(0xFF4CAF50)
+                                        UsernameAvailability.TAKEN -> MaterialTheme.colorScheme.error
+                                        else -> MaterialTheme.colorScheme.primary
+                                    },
                                     modifier = Modifier.padding(start = 12.dp, end = 4.dp)
                                 )
                             },
+                            trailingIcon = if (uiState.usernameAvailability != UsernameAvailability.IDLE) {
+                                {
+                                    when (uiState.usernameAvailability) {
+                                        UsernameAvailability.CHECKING -> {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(18.dp),
+                                                strokeWidth = 2.dp,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        UsernameAvailability.AVAILABLE -> {
+                                            Icon(
+                                                imageVector = Icons.Default.CheckCircle,
+                                                contentDescription = "Available",
+                                                tint = Color(0xFF4CAF50),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        UsernameAvailability.TAKEN -> {
+                                            Icon(
+                                                imageVector = Icons.Default.Cancel,
+                                                contentDescription = "Taken",
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        UsernameAvailability.TOO_SHORT -> {
+                                            Icon(
+                                                imageVector = Icons.Default.Info,
+                                                contentDescription = "Too short",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        UsernameAvailability.IDLE -> Unit
+                                    }
+                                }
+                            } else null,
                             singleLine = true,
-                            isError = uiState.usernameError != null,
+                            isError = uiState.usernameAvailability == UsernameAvailability.TAKEN,
                             supportingText = {
-                                if (uiState.usernameError != null) {
-                                    Text(
-                                        text = uiState.usernameError ?: "",
-                                        color = MaterialTheme.colorScheme.error,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                } else {
-                                    Text(
-                                        text = "Unique handle for search & profile. 3-20 chars (letters, numbers, _)",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                when (uiState.usernameAvailability) {
+                                    UsernameAvailability.CHECKING -> {
+                                        Text(
+                                            text = "Checking availability...",
+                                            color = MaterialTheme.colorScheme.primary,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    UsernameAvailability.AVAILABLE -> {
+                                        Text(
+                                            text = "✓ @${uiState.editUsername} is available",
+                                            color = Color(0xFF4CAF50),
+                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold)
+                                        )
+                                    }
+                                    UsernameAvailability.TAKEN -> {
+                                        Text(
+                                            text = "✕ @${uiState.editUsername} is already taken",
+                                            color = MaterialTheme.colorScheme.error,
+                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold)
+                                        )
+                                    }
+                                    UsernameAvailability.TOO_SHORT -> {
+                                        Text(
+                                            text = "Username must be 3-20 characters (a-z, 0-9, _)",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    UsernameAvailability.IDLE -> {
+                                        Text(
+                                            text = "Unique handle for search & profile. 3-20 chars (letters, numbers, _)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = BorderSubtleDark,
+                                focusedBorderColor = if (uiState.usernameAvailability == UsernameAvailability.AVAILABLE) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = if (uiState.usernameAvailability == UsernameAvailability.AVAILABLE) Color(0xFF4CAF50).copy(alpha = 0.5f) else BorderSubtleDark,
                                 focusedContainerColor = MaterialTheme.colorScheme.background,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.6f)
                             )
@@ -396,32 +474,7 @@ fun EditProfileScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Button(
-                onClick = {
-                    if (uiState.editName.trim().isNotBlank()) {
-                        viewModel.onSaveClick()
-                        Toast.makeText(context, "Profile updated successfully", Toast.LENGTH_SHORT).show()
-                        onBackClick()
-                    } else {
-                        Toast.makeText(context, "Name cannot be empty", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            ) {
-                Text(
-                    text = "Save Changes",
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
-                )
-            }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

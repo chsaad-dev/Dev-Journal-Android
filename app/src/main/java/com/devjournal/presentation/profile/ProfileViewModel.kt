@@ -24,6 +24,7 @@ import com.devjournal.domain.usecase.UnfollowUserUseCase
 import com.devjournal.domain.usecase.UpdateUserProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +33,14 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+enum class UsernameAvailability {
+    IDLE,
+    CHECKING,
+    AVAILABLE,
+    TAKEN,
+    TOO_SHORT
+}
 
 data class ProfileUiState(
     val profile: UserProfile? = null,
@@ -44,6 +53,7 @@ data class ProfileUiState(
     val editName: String = "",
     val editBio: String = "",
     val editUsername: String = "",
+    val usernameAvailability: UsernameAvailability = UsernameAvailability.IDLE,
     val isCheckingUsername: Boolean = false,
     val usernameError: String? = null,
     val isUploadingPhoto: Boolean = false,
@@ -83,6 +93,7 @@ class ProfileViewModel @Inject constructor(
     private val navUid: String? = savedStateHandle.get<String>("uid")
     private var profileJob: Job? = null
     private var followingJob: Job? = null
+    private var usernameCheckJob: Job? = null
     private var currentAuthUid: String? = null
 
     init {
@@ -279,12 +290,14 @@ class ProfileViewModel @Inject constructor(
 
     fun onEditClick() {
         val currentProfile = _uiState.value.profile
+        val username = currentProfile?.displayUsername ?: ""
         _uiState.update {
             it.copy(
                 isEditing = !it.isEditing,
                 editName = currentProfile?.name ?: "",
                 editBio = currentProfile?.bio ?: "",
-                editUsername = currentProfile?.displayUsername ?: "",
+                editUsername = username,
+                usernameAvailability = if (username.isNotBlank()) UsernameAvailability.AVAILABLE else UsernameAvailability.IDLE,
                 usernameError = null,
                 errorMessage = null
             )
@@ -292,13 +305,16 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun onCancelEdit() {
+        usernameCheckJob?.cancel()
         val currentProfile = _uiState.value.profile
+        val username = currentProfile?.displayUsername ?: ""
         _uiState.update {
             it.copy(
                 isEditing = false,
                 editName = currentProfile?.name ?: "",
                 editBio = currentProfile?.bio ?: "",
-                editUsername = currentProfile?.displayUsername ?: "",
+                editUsername = username,
+                usernameAvailability = if (username.isNotBlank()) UsernameAvailability.AVAILABLE else UsernameAvailability.IDLE,
                 usernameError = null,
                 errorMessage = null
             )
@@ -314,8 +330,73 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun onUsernameChange(username: String) {
-        val cleaned = username.lowercase().replace(Regex("[^a-z0-9_]"), "")
-        _uiState.update { it.copy(editUsername = cleaned, usernameError = null) }
+        val cleaned = username.lowercase().replace(Regex("[^a-z0-9_]"), "").take(20)
+        val currentProfileUsername = _uiState.value.profile?.username?.lowercase() ?: ""
+
+        usernameCheckJob?.cancel()
+
+        if (cleaned.isBlank()) {
+            _uiState.update { 
+                it.copy(
+                    editUsername = cleaned,
+                    usernameAvailability = UsernameAvailability.IDLE,
+                    usernameError = null,
+                    isCheckingUsername = false
+                ) 
+            }
+            return
+        }
+
+        if (cleaned.length < 3) {
+            _uiState.update { 
+                it.copy(
+                    editUsername = cleaned,
+                    usernameAvailability = UsernameAvailability.TOO_SHORT,
+                    usernameError = "Username must be at least 3 characters",
+                    isCheckingUsername = false
+                ) 
+            }
+            return
+        }
+
+        // If identical to current user's username, it's immediately available to them
+        if (cleaned == currentProfileUsername) {
+            _uiState.update { 
+                it.copy(
+                    editUsername = cleaned,
+                    usernameAvailability = UsernameAvailability.AVAILABLE,
+                    usernameError = null,
+                    isCheckingUsername = false
+                ) 
+            }
+            return
+        }
+
+        _uiState.update { 
+            it.copy(
+                editUsername = cleaned,
+                usernameAvailability = UsernameAvailability.CHECKING,
+                usernameError = null,
+                isCheckingUsername = true
+            ) 
+        }
+
+        usernameCheckJob = viewModelScope.launch {
+            delay(350)
+            val currentUid = currentAuthUid ?: ""
+            val isAvailable = checkUsernameAvailabilityUseCase(cleaned, currentUid)
+            _uiState.update { current ->
+                if (current.editUsername == cleaned) {
+                    current.copy(
+                        usernameAvailability = if (isAvailable) UsernameAvailability.AVAILABLE else UsernameAvailability.TAKEN,
+                        usernameError = if (isAvailable) null else "@$cleaned is already taken",
+                        isCheckingUsername = false
+                    )
+                } else {
+                    current
+                }
+            }
+        }
     }
 
     fun onSaveClick(onSuccess: (() -> Unit)? = null) {
@@ -339,16 +420,26 @@ class ProfileViewModel @Inject constructor(
             return
         }
 
+        if (_uiState.value.usernameAvailability == UsernameAvailability.TAKEN) {
+            _uiState.update { it.copy(usernameError = "Username @$newUsername is already taken") }
+            return
+        }
+
         val currentUid = currentAuthUid ?: return
 
         viewModelScope.launch {
-            // Check availability if username was modified
-            if (newUsername != currentProfile.username.lowercase()) {
+            // Check availability if username was modified and not already confirmed available
+            if (newUsername != currentProfile.username.lowercase() && _uiState.value.usernameAvailability != UsernameAvailability.AVAILABLE) {
                 _uiState.update { it.copy(isCheckingUsername = true) }
                 val isAvailable = checkUsernameAvailabilityUseCase(newUsername, currentUid)
                 _uiState.update { it.copy(isCheckingUsername = false) }
                 if (!isAvailable) {
-                    _uiState.update { it.copy(usernameError = "Username @$newUsername is already taken") }
+                    _uiState.update { 
+                        it.copy(
+                            usernameAvailability = UsernameAvailability.TAKEN,
+                            usernameError = "Username @$newUsername is already taken"
+                        ) 
+                    }
                     return@launch
                 }
             }
