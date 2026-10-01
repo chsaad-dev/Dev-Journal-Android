@@ -117,10 +117,10 @@ fun FeedScreen(
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Intercept physical/gesture Back button when not on Home page (smoothly scroll to Home)
+    // Intercept physical/gesture Back button when not on Home page (directly switch to Home)
     BackHandler(enabled = pagerState.currentPage != 0) {
         coroutineScope.launch {
-            pagerState.animateScrollToPage(0)
+            pagerState.scrollToPage(0)
         }
     }
 
@@ -197,7 +197,11 @@ fun FeedScreen(
                     selected = pagerState.currentPage == 0,
                     onClick = {
                         coroutineScope.launch {
-                            pagerState.animateScrollToPage(0)
+                            if (pagerState.currentPage == 0) {
+                                homeListState.animateScrollToItem(0)
+                            } else {
+                                pagerState.scrollToPage(0)
+                            }
                         }
                     },
                     icon = {
@@ -217,9 +221,13 @@ fun FeedScreen(
                     selected = pagerState.currentPage == 1,
                     onClick = {
                         coroutineScope.launch {
-                            pagerState.animateScrollToPage(1)
-                            if (uiState.selectedTab == FeedTab.FOLLOWING) {
-                                viewModel.onTabSelected(FeedTab.FOR_YOU)
+                            if (pagerState.currentPage == 1) {
+                                feedListState.animateScrollToItem(0)
+                            } else {
+                                pagerState.scrollToPage(1)
+                                if (uiState.selectedTab == FeedTab.FOLLOWING) {
+                                    viewModel.onTabSelected(FeedTab.FOR_YOU)
+                                }
                             }
                         }
                     },
@@ -240,7 +248,7 @@ fun FeedScreen(
                     selected = pagerState.currentPage == 2,
                     onClick = {
                         coroutineScope.launch {
-                            pagerState.animateScrollToPage(2)
+                            pagerState.scrollToPage(2)
                         }
                     },
                     icon = {
@@ -260,7 +268,7 @@ fun FeedScreen(
                     selected = pagerState.currentPage == 3,
                     onClick = {
                         coroutineScope.launch {
-                            pagerState.animateScrollToPage(3)
+                            pagerState.scrollToPage(3)
                         }
                     },
                     icon = {
@@ -699,7 +707,7 @@ fun FeedScreen(
                             onUserClick = onAuthorClick,
                             onBackClick = {
                                 coroutineScope.launch {
-                                    pagerState.animateScrollToPage(0)
+                                    pagerState.scrollToPage(0)
                                 }
                             },
                             showBackButton = false
@@ -716,7 +724,7 @@ fun FeedScreen(
                             onFollowingClick = onFollowingClick,
                             onBackClick = {
                                 coroutineScope.launch {
-                                    pagerState.animateScrollToPage(0)
+                                    pagerState.scrollToPage(0)
                                 }
                             },
                             showBackButton = false
