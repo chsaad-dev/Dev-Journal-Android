@@ -1,11 +1,16 @@
 package com.devjournal.presentation.postdetail
 
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,19 +32,16 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.ChatBubbleOutline
-import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -56,27 +58,43 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.devjournal.data.model.Comment
+import com.devjournal.presentation.components.BottomImageScrim
+import com.devjournal.presentation.components.EdgeFadeHorizontalRow
+import com.devjournal.presentation.components.GlassIconButton
+import com.devjournal.presentation.components.PostActionMenu
+import com.devjournal.presentation.components.StatChip
+import com.devjournal.presentation.components.TopImageScrim
+import com.devjournal.presentation.util.sharePost
+import com.devjournal.ui.theme.BookmarkPurple
+import com.devjournal.ui.theme.BookmarkPurpleContainer
+import com.devjournal.ui.theme.BorderSubtleDark
+import com.devjournal.ui.theme.LikeRed
+import com.devjournal.ui.theme.LikeRedContainer
+import com.devjournal.ui.theme.ViewCyan
+import com.devjournal.ui.theme.ViewCyanContainer
 import java.text.SimpleDateFormat
 import java.util.Locale
-import androidx.compose.ui.platform.LocalContext
-import com.devjournal.presentation.util.sharePost
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,14 +106,20 @@ fun PostDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val post = uiState.post
     val context = LocalContext.current
-    
+    val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
+
+    val hasCover = !post?.coverImageUrl.isNullOrBlank()
+    // Smooth scroll-driven TopAppBar elevation & title reveal
+    val isScrolled by remember { derivedStateOf { scrollState.value > 160 } }
+    val showSolidTopBar = isScrolled || !hasCover
+
     LaunchedEffect(uiState.postDeleted) {
         if (uiState.postDeleted) {
             onBackClick()
         }
     }
 
-    var showMenu by remember { mutableStateOf(false) }
     var showDeletePostDialog by remember { mutableStateOf(false) }
     var commentIdToDelete by remember { mutableStateOf<String?>(null) }
 
@@ -154,82 +178,94 @@ fun PostDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {},
-                navigationIcon = {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .background(Color.Black.copy(alpha = 0.45f), CircleShape)
+                title = {
+                    AnimatedVisibility(
+                        visible = showSolidTopBar,
+                        enter = fadeIn(),
+                        exit = fadeOut()
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        Text(
+                            text = post?.title ?: "",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                },
+                navigationIcon = {
+                    if (showSolidTopBar) {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    } else {
+                        GlassIconButton(
+                            icon = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color.White
+                            onClick = onBackClick,
+                            modifier = Modifier.padding(start = 12.dp)
                         )
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = { viewModel.onBookmarkClick() },
-                        modifier = Modifier
-                            .padding(vertical = 8.dp)
-                            .background(Color.Black.copy(alpha = 0.45f), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = if (uiState.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                            contentDescription = if (uiState.isBookmarked) "Saved" else "Save Article",
-                            tint = if (uiState.isBookmarked) MaterialTheme.colorScheme.primary else Color.White
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    IconButton(
-                        onClick = { post?.let { sharePost(context, it) } },
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .background(Color.Black.copy(alpha = 0.45f), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share",
-                            tint = Color.White
-                        )
-                    }
-                    if (post != null && (uiState.isAdmin || uiState.currentUserId == post.authorId)) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Box {
-                            IconButton(
-                                onClick = { showMenu = true },
-                                modifier = Modifier
-                                    .padding(vertical = 8.dp)
-                                    .background(Color.Black.copy(alpha = 0.45f), CircleShape)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "More Options",
-                                    tint = Color.White
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Delete Post") },
-                                    onClick = {
-                                        showMenu = false
-                                        showDeletePostDialog = true
-                                    },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                                    }
-                                )
-                            }
+                    if (showSolidTopBar) {
+                        // Bookmarked action
+                        IconButton(onClick = { viewModel.onBookmarkClick() }) {
+                            Icon(
+                                imageVector = if (uiState.isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                                contentDescription = if (uiState.isBookmarked) "Saved" else "Save Article",
+                                tint = if (uiState.isBookmarked) BookmarkPurple else MaterialTheme.colorScheme.onSurface
+                            )
                         }
+                        // Share action
+                        IconButton(onClick = { post?.let { sharePost(context, it) } }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Share,
+                                contentDescription = "Share",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        // Post owner menu
+                        if (post != null && (uiState.isAdmin || uiState.currentUserId == post.authorId)) {
+                            PostActionMenu(
+                                canEdit = false, // Post editor navigated via feed or profile
+                                canDelete = true,
+                                onEditClick = null,
+                                onDeleteClick = { showDeletePostDialog = true }
+                            )
+                        }
+                    } else {
+                        GlassIconButton(
+                            icon = if (uiState.isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                            contentDescription = if (uiState.isBookmarked) "Saved" else "Save Article",
+                            tint = if (uiState.isBookmarked) BookmarkPurple else Color.White,
+                            onClick = { viewModel.onBookmarkClick() }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        GlassIconButton(
+                            icon = Icons.Outlined.Share,
+                            contentDescription = "Share",
+                            tint = Color.White,
+                            onClick = { post?.let { sharePost(context, it) } }
+                        )
+                        if (post != null && (uiState.isAdmin || uiState.currentUserId == post.authorId)) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            PostActionMenu(
+                                canEdit = false,
+                                canDelete = true,
+                                onEditClick = null,
+                                onDeleteClick = { showDeletePostDialog = true }
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
+                    containerColor = if (showSolidTopBar) MaterialTheme.colorScheme.surface.copy(alpha = 0.95f) else Color.Transparent
                 )
             )
         },
@@ -240,7 +276,8 @@ fun PostDetailScreen(
                     .imePadding()
                     .navigationBarsPadding(),
                 color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp
+                tonalElevation = 8.dp,
+                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
             ) {
                 Row(
                     modifier = Modifier
@@ -251,7 +288,13 @@ fun PostDetailScreen(
                     OutlinedTextField(
                         value = uiState.commentInput,
                         onValueChange = { viewModel.onCommentInputChange(it) },
-                        placeholder = { Text("Add a comment...") },
+                        placeholder = {
+                            Text(
+                                "Add a thoughtful comment...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(24.dp),
                         singleLine = true,
@@ -259,7 +302,9 @@ fun PostDetailScreen(
                         keyboardActions = KeyboardActions(onSend = { viewModel.onSubmitComment() }),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                            unfocusedBorderColor = BorderSubtleDark,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                         )
                     )
 
@@ -269,7 +314,7 @@ fun PostDetailScreen(
                         onClick = { viewModel.onSubmitComment() },
                         enabled = uiState.commentInput.isNotBlank() && !uiState.isSubmittingComment,
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(46.dp)
                             .background(
                                 color = if (uiState.commentInput.isNotBlank() && !uiState.isSubmittingComment)
                                     MaterialTheme.colorScheme.primaryContainer
@@ -291,7 +336,8 @@ fun PostDetailScreen(
                                 tint = if (uiState.commentInput.isNotBlank())
                                     MaterialTheme.colorScheme.onPrimaryContainer
                                 else
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -316,7 +362,7 @@ fun PostDetailScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Post not found",
+                    text = "Article not found",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -325,21 +371,29 @@ fun PostDetailScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
                     .padding(bottom = paddingValues.calculateBottomPadding())
             ) {
-                // Header Cover Image
+                // Cover Image with Top & Bottom Scrims
                 if (post.coverImageUrl.isNotBlank()) {
-                    AsyncImage(
-                        model = post.coverImageUrl,
-                        contentDescription = "Cover Image",
-                        contentScale = ContentScale.Crop,
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(240.dp)
-                    )
+                            .height(260.dp)
+                    ) {
+                        AsyncImage(
+                            model = post.coverImageUrl,
+                            contentDescription = "Cover Image for ${post.title}",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        // Top scrim guarantees back/share/bookmark visibility
+                        TopImageScrim(height = 110.dp, maxAlpha = 0.75f)
+                        // Bottom scrim creates a smooth fade into surface
+                        BottomImageScrim(height = 80.dp, maxAlpha = 0.65f)
+                    }
                 } else {
-                    Spacer(modifier = Modifier.height(paddingValues.calculateTopPadding()))
+                    Spacer(modifier = Modifier.height(paddingValues.calculateTopPadding() + 8.dp))
                 }
 
                 Column(
@@ -350,16 +404,16 @@ fun PostDetailScreen(
                     // Title
                     Text(
                         text = post.title,
-                        style = MaterialTheme.typography.headlineMedium.copy(
+                        style = MaterialTheme.typography.headlineLarge.copy(
                             fontWeight = FontWeight.Bold,
-                            lineHeight = 34.sp
+                            lineHeight = 36.sp
                         ),
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // Author Row
+                    // Author Row (Clean, modern byline)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -379,15 +433,17 @@ fun PostDetailScreen(
                                 contentDescription = "Author Avatar",
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(42.dp)
                                     .clip(CircleShape)
+                                    .border(1.5.dp, BorderSubtleDark, CircleShape)
                             )
                         } else {
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(42.dp)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .border(1.5.dp, BorderSubtleDark, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -402,10 +458,20 @@ fun PostDetailScreen(
                         Spacer(modifier = Modifier.width(12.dp))
 
                         Column(modifier = Modifier.weight(1f)) {
+                            val authorDisplayName = if (uiState.authorName.isNotBlank()) {
+                                uiState.authorName
+                            } else if (post.authorId.isNotBlank()) {
+                                "Developer (${post.authorId.take(6)})"
+                            } else {
+                                "DevJournal Author"
+                            }
+
                             Text(
-                                text = if (uiState.authorName.isNotBlank()) "Author: ${uiState.authorName}" else if (post.authorId.isNotBlank()) "Author: ${post.authorId.take(8)}" else "DevJournal Author",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurface
+                                text = authorDisplayName,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = "${formatDetailTimestamp(post.createdAt?.toDate()?.time)} • ${post.readTimeMinutes.coerceAtLeast(1)} min read",
@@ -415,24 +481,25 @@ fun PostDetailScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // Tag chips row
+                    // Tag Chips Row with edge fade
                     if (post.tags.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
+                        val detailTagScrollState = rememberScrollState()
+                        EdgeFadeHorizontalRow(
+                            scrollState = detailTagScrollState,
+                            contentPadding = PaddingValues(vertical = 4.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             post.tags.forEach { tag ->
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
                                 ) {
                                     Text(
                                         text = if (tag.startsWith("#")) tag else "#$tag",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                                     )
@@ -442,109 +509,93 @@ fun PostDetailScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    // Excerpt
+                    // Excerpt (Styled as an italic lead paragraph)
                     if (post.excerpt.isNotBlank()) {
                         Text(
                             text = post.excerpt,
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                                lineHeight = 26.sp
+                                lineHeight = 24.sp
                             ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
 
-                    Spacer(modifier = Modifier.height(18.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                    // Markdown Content Body
+                    // Complete Styled Markdown Content
                     RenderMarkdownBody(content = post.content)
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(28.dp))
 
-                    // Engagement Row (Like + Comment counts)
+                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Unified Social Engagement Row (Likes, Comments, Views)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        IconButton(onClick = { viewModel.onLikeClick() }) {
-                            Icon(
-                                imageVector = if (uiState.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = if (uiState.isLiked) "Unlike" else "Like",
-                                tint = if (uiState.isLiked) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Text(
-                            text = "${post.likeCount} likes",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        // Like Chip
+                        StatChip(
+                            icon = if (uiState.isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                            label = "${post.likeCount} likes",
+                            contentDescription = if (uiState.isLiked) "Unlike" else "Like",
+                            isActive = uiState.isLiked,
+                            activeColor = LikeRed,
+                            activeContainerColor = LikeRedContainer,
+                            showBorder = true,
+                            onClick = { viewModel.onLikeClick() }
                         )
 
-                        Spacer(modifier = Modifier.width(20.dp))
-
-                        Icon(
-                            imageVector = Icons.Default.ChatBubbleOutline,
+                        // Comment Chip
+                        StatChip(
+                            icon = Icons.Outlined.ChatBubbleOutline,
+                            label = "${uiState.comments.size} comments",
                             contentDescription = "Comments",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "${uiState.comments.size} comments",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            isActive = false,
+                            inactiveColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            showBorder = true,
+                            onClick = {
+                                coroutineScope.launch {
+                                    scrollState.animateScrollTo(scrollState.maxValue)
+                                }
+                            }
                         )
 
-                        Spacer(modifier = Modifier.width(20.dp))
-
-                        // Views indicator (Clickable for author / admin to open "Read by" sheet)
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = if (uiState.canViewReadersList) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else Color.Transparent,
-                            modifier = Modifier.clickable {
+                        // Views Chip (Clickable for author / admin to open reader list)
+                        StatChip(
+                            icon = Icons.Outlined.Visibility,
+                            label = "${post.viewCount} views",
+                            contentDescription = "View count",
+                            isActive = uiState.canViewReadersList,
+                            activeColor = ViewCyan,
+                            activeContainerColor = ViewCyanContainer,
+                            showBorder = true,
+                            onClick = {
                                 if (uiState.canViewReadersList) {
                                     viewModel.onOpenViewersSheet()
                                 } else {
-                                    android.widget.Toast.makeText(
+                                    Toast.makeText(
                                         context,
-                                        "View count is public. Detailed reader list is visible to author & admins.",
-                                        android.widget.Toast.LENGTH_SHORT
+                                        "View count is public. Detailed reader list is visible to the author and admins.",
+                                        Toast.LENGTH_SHORT
                                     ).show()
                                 }
                             }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Visibility,
-                                    contentDescription = "Views",
-                                    tint = if (uiState.canViewReadersList) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "${post.viewCount} views",
-                                    style = MaterialTheme.typography.labelLarge.copy(
-                                        fontWeight = if (uiState.canViewReadersList) FontWeight.SemiBold else FontWeight.Normal
-                                    ),
-                                    color = if (uiState.canViewReadersList) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(28.dp))
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Comments Section Header
+                    // Comments Header
                     Text(
-                        text = "Comments (${uiState.comments.size})",
+                        text = "Discussion (${uiState.comments.size})",
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -552,16 +603,23 @@ fun PostDetailScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     if (uiState.comments.isEmpty()) {
-                        Text(
-                            text = "No comments yet. Be the first to start the conversation!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 12.dp)
-                        )
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
+                        ) {
+                            Text(
+                                text = "No comments yet. Share your thoughts or ask a question!",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
                     } else {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             uiState.comments.forEach { comment ->
                                 CommentItem(
@@ -595,6 +653,10 @@ fun PostDetailScreen(
     }
 }
 
+/**
+ * Modern comment card with strict ownership check for delete action,
+ * user avatar ring, and clean typography.
+ */
 @Composable
 fun CommentItem(
     comment: Comment,
@@ -604,28 +666,34 @@ fun CommentItem(
     commenterPhotoUrl: String?,
     onDelete: () -> Unit
 ) {
+    val isOwner = !currentUserId.isNullOrBlank() && currentUserId == comment.userId
+    val canDelete = isOwner || isAdmin
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(14.dp)
         ) {
+            // Commenter Avatar
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .border(1.dp, BorderSubtleDark, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 if (!commenterPhotoUrl.isNullOrBlank()) {
-                    coil.compose.AsyncImage(
+                    AsyncImage(
                         model = commenterPhotoUrl,
                         contentDescription = "Commenter Avatar",
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
@@ -633,12 +701,12 @@ fun CommentItem(
                         imageVector = Icons.Default.AccountCircle,
                         contentDescription = "Commenter Avatar",
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(34.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(
@@ -646,26 +714,37 @@ fun CommentItem(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val displayName = if (!commenterName.isNullOrBlank()) {
+                        commenterName
+                    } else if (comment.userId.isNotBlank()) {
+                        "User (${comment.userId.take(6)})"
+                    } else {
+                        "Developer"
+                    }
+
                     Text(
-                        text = if (!commenterName.isNullOrBlank()) commenterName else if (comment.userId.isNotBlank()) "User (${comment.userId.take(6)})" else "Developer",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                        text = displayName,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = formatDetailTimestamp(comment.createdAt?.toDate()?.time),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (isAdmin || currentUserId == comment.userId) {
+
+                        // Strict comment delete action: only owner or verified admin
+                        if (canDelete) {
                             IconButton(
                                 onClick = onDelete,
                                 modifier = Modifier
-                                    .padding(start = 4.dp)
+                                    .padding(start = 6.dp)
                                     .size(24.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.DeleteOutline,
+                                    imageVector = Icons.Outlined.DeleteOutline,
                                     contentDescription = "Delete Comment",
                                     tint = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(16.dp)
@@ -679,14 +758,13 @@ fun CommentItem(
 
                 Text(
                     text = comment.text,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
     }
 }
-
 
 private fun formatDetailTimestamp(timeMs: Long?): String {
     if (timeMs == null) return "Just now"
