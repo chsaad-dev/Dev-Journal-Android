@@ -23,7 +23,10 @@ import com.devjournal.presentation.notifications.NotificationsScreen
 import com.devjournal.presentation.postdetail.PostDetailScreen
 import com.devjournal.presentation.followlist.FollowListScreen
 import com.devjournal.presentation.profile.ProfileScreen
+import com.devjournal.presentation.profile.EditProfileScreen
 import com.devjournal.presentation.settings.SettingsScreen
+import com.devjournal.presentation.settings.PrivacySettingsScreen
+import com.devjournal.presentation.settings.LinkedAccountsScreen
 import com.devjournal.presentation.search.SearchScreen
 import com.devjournal.presentation.splash.SplashScreen
 import com.devjournal.ui.theme.DevJournalTheme
@@ -147,6 +150,9 @@ class MainActivity : ComponentActivity() {
                             onSettingsClick = {
                                 navController.navigate("settings")
                             },
+                            onEditProfileClick = {
+                                navController.navigate("editprofile")
+                            },
                             onFollowersClick = { uid ->
                                 navController.navigate("followlist/$uid/followers")
                             },
@@ -177,11 +183,35 @@ class MainActivity : ComponentActivity() {
                     composable("settings") {
                         SettingsScreen(
                             onBackClick = { navController.popBackStack() },
+                            onEditProfileClick = {
+                                navController.navigate("editprofile")
+                            },
+                            onPrivacyClick = {
+                                navController.navigate("settings/privacy")
+                            },
+                            onLinkedAccountsClick = {
+                                navController.navigate("settings/linked-accounts")
+                            },
                             onSignedOut = {
                                 navController.navigate("login") {
                                     popUpTo(navController.graph.id) { inclusive = true }
                                 }
                             }
+                        )
+                    }
+                    composable("editprofile") {
+                        EditProfileScreen(
+                            onBackClick = { navController.popBackStack() }
+                        )
+                    }
+                    composable("settings/privacy") {
+                        PrivacySettingsScreen(
+                            onBackClick = { navController.popBackStack() }
+                        )
+                    }
+                    composable("settings/linked-accounts") {
+                        LinkedAccountsScreen(
+                            onBackClick = { navController.popBackStack() }
                         )
                     }
                     composable("notifications") {
