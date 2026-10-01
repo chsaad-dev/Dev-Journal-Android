@@ -1,20 +1,80 @@
 package com.devjournal.presentation.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.*
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.ExitToApp
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.ColorLens
+import androidx.compose.material.icons.outlined.DeleteForever
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.FormatSize
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.devjournal.BuildConfig
+import com.devjournal.ui.theme.BorderSubtleDark
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -22,11 +82,19 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
+    onEditProfileClick: () -> Unit = {},
+    onPrivacyClick: () -> Unit = {},
+    onLinkedAccountsClick: () -> Unit = {},
     onSignedOut: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val currentUser = FirebaseAuth.getInstance().currentUser
+
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var showSignOutDialog by remember { mutableStateOf(false) }
+    var selectedThemeTitle by remember { mutableStateOf("Obsidian Dark") }
 
     LaunchedEffect(uiState.isSignedOut) {
         if (uiState.isSignedOut) {
@@ -34,265 +102,359 @@ fun SettingsScreen(
         }
     }
 
-    val showStubMessage: () -> Unit = {
+    val showStubMessage: (String) -> Unit = { message ->
         coroutineScope.launch {
-            snackbarHostState.showSnackbar("Coming soon", duration = SnackbarDuration.Short)
+            snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
         }
+    }
+
+    if (showThemeDialog) {
+        ThemeSelectionDialog(
+            onDismissRequest = { showThemeDialog = false },
+            onThemeSelected = { mode ->
+                selectedThemeTitle = mode.title.takeWhile { it != '(' }.trim()
+                showThemeDialog = false
+            }
+        )
+    }
+
+    if (showSignOutDialog) {
+        AlertDialog(
+            onDismissRequest = { showSignOutDialog = false },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.border(1.dp, BorderSubtleDark, RoundedCornerShape(20.dp)),
+            icon = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Sign Out?",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to sign out of DevJournal on this device?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSignOutDialog = false
+                        viewModel.onSignOutClick()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Text("Sign Out")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSignOutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = {
+                    Text(
+                        text = "Settings",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(bottom = 32.dp)
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // SECTION: Account
-            item { SettingsSectionHeader("ACCOUNT") }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Person,
-                    title = "Edit Profile",
-                    onClick = showStubMessage
-                )
-            }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Email,
-                    title = "Change Email",
-                    onClick = showStubMessage
-                )
-            }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Lock,
-                    title = "Change Password",
-                    onClick = showStubMessage
-                )
-            }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Link,
-                    title = "Linked Accounts",
-                    trailing = { Text("Google", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    onClick = showStubMessage
-                )
-            }
-
-            // SECTION: Notifications
-            item { SettingsSectionHeader("NOTIFICATIONS") }
-            item {
-                SettingsSwitchItem(
-                    icon = Icons.Default.Notifications,
-                    title = "Push Notifications",
-                    initialValue = true
-                )
-            }
-            item {
-                SettingsSwitchItem(
-                    icon = Icons.Default.ChatBubbleOutline,
-                    title = "New Comments",
-                    initialValue = true
-                )
-            }
-            item {
-                SettingsSwitchItem(
-                    icon = Icons.Default.FavoriteBorder,
-                    title = "New Likes",
-                    initialValue = true
-                )
-            }
-            item {
-                SettingsSwitchItem(
-                    icon = Icons.Default.PersonAdd,
-                    title = "New Followers",
-                    initialValue = true
-                )
-            }
-            item {
-                SettingsSwitchItem(
-                    icon = Icons.AutoMirrored.Filled.List,
-                    title = "New Posts from people you follow",
-                    initialValue = false
-                )
-            }
-
-            // SECTION: Appearance
-            item { SettingsSectionHeader("APPEARANCE") }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Palette,
-                    title = "Theme",
-                    trailing = { Text("System", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    onClick = showStubMessage
-                )
-            }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.FormatSize,
-                    title = "Reading Font Size",
-                    trailing = { Text("Medium", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    onClick = showStubMessage
-                )
-            }
-
-            // SECTION: Privacy
-            item { SettingsSectionHeader("PRIVACY") }
-            item {
-                SettingsSwitchItem(
-                    icon = Icons.Outlined.Lock,
-                    title = "Private Account",
-                    initialValue = false
-                )
-            }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Block,
-                    title = "Blocked Users",
-                    onClick = showStubMessage
-                )
-            }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Chat,
-                    title = "Who Can Comment",
-                    trailing = { Text("Everyone", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                    onClick = showStubMessage
-                )
-            }
-
-            // SECTION: Content
-            item { SettingsSectionHeader("CONTENT") }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.BookmarkBorder,
-                    title = "Saved Posts",
-                    onClick = showStubMessage
-                )
-            }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.FavoriteBorder,
-                    title = "Liked Posts",
-                    onClick = showStubMessage
-                )
-            }
-            if (uiState.isAdmin) {
+            // User Header Profile Overview
+            if (currentUser != null) {
                 item {
-                    SettingsItem(
-                        icon = Icons.Default.Edit,
-                        title = "My Posts / Drafts",
-                        onClick = showStubMessage
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, BorderSubtleDark, RoundedCornerShape(16.dp)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .border(1.dp, BorderSubtleDark, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Person,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = currentUser.displayName?.ifBlank { "DevJournal Author" } ?: "DevJournal Author",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = currentUser.email ?: "Active Account",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // SECTION 1: ACCOUNT
+            item {
+                SettingsSection(title = "ACCOUNT") {
+                    SettingsCardItem(
+                        icon = Icons.Outlined.Edit,
+                        title = "Edit Profile",
+                        subtitle = "Name, avatar, bio, and social handles",
+                        isNavigable = true,
+                        onClick = onEditProfileClick
+                    )
+                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                    SettingsCardItem(
+                        icon = Icons.Outlined.Link,
+                        title = "Linked Accounts",
+                        subtitle = "Google, GitHub, and authentication providers",
+                        trailingText = "Google",
+                        isNavigable = true,
+                        onClick = onLinkedAccountsClick
                     )
                 }
             }
+
+            // SECTION 2: APPEARANCE & READING
             item {
-                SettingsItem(
-                    icon = Icons.Default.Download,
-                    title = "Download My Data",
-                    onClick = showStubMessage
+                SettingsSection(title = "APPEARANCE & READING") {
+                    SettingsCardItem(
+                        icon = Icons.Outlined.Palette,
+                        title = "Theme",
+                        subtitle = "OLED Obsidian, System Default, or Light",
+                        trailingText = selectedThemeTitle,
+                        isNavigable = true,
+                        onClick = { showThemeDialog = true }
+                    )
+                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                    SettingsCardItem(
+                        icon = Icons.Outlined.FormatSize,
+                        title = "Reading Font Size",
+                        subtitle = "Adjust text scale for articles",
+                        trailingText = "Medium",
+                        isNavigable = true,
+                        onClick = { showStubMessage("Font size preferences coming soon") }
+                    )
+                }
+            }
+
+            // SECTION 3: NOTIFICATIONS
+            item {
+                SettingsSection(title = "NOTIFICATIONS") {
+                    SettingsSwitchCardItem(
+                        icon = Icons.Outlined.Notifications,
+                        title = "Push Notifications",
+                        subtitle = "Receive timely alerts on your device",
+                        initialValue = true
+                    )
+                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                    SettingsSwitchCardItem(
+                        icon = Icons.Outlined.ChatBubbleOutline,
+                        title = "New Comments",
+                        subtitle = "When someone replies to your articles",
+                        initialValue = true
+                    )
+                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                    SettingsSwitchCardItem(
+                        icon = Icons.Outlined.FavoriteBorder,
+                        title = "New Likes",
+                        subtitle = "When your articles receive claps and hearts",
+                        initialValue = true
+                    )
+                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                    SettingsSwitchCardItem(
+                        icon = Icons.Outlined.PersonAdd,
+                        title = "New Followers",
+                        subtitle = "When fellow engineers follow your profile",
+                        initialValue = true
+                    )
+                }
+            }
+
+            // SECTION 4: PRIVACY & SECURITY
+            item {
+                SettingsSection(title = "PRIVACY & SECURITY") {
+                    SettingsCardItem(
+                        icon = Icons.Outlined.Lock,
+                        title = "Privacy & Permissions",
+                        subtitle = "Who can comment, account discovery, blocked users",
+                        isNavigable = true,
+                        onClick = onPrivacyClick
+                    )
+                }
+            }
+
+            // SECTION 5: DANGER ZONE
+            item {
+                SettingsSection(title = "SESSION & ACCOUNT") {
+                    SettingsCardItem(
+                        icon = Icons.AutoMirrored.Outlined.ExitToApp,
+                        title = "Sign Out",
+                        subtitle = "Sign out from DevJournal on this phone",
+                        titleColor = MaterialTheme.colorScheme.error,
+                        isNavigable = true,
+                        onClick = { showSignOutDialog = true }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsSection(
+    title: String,
+    content: @Composable () -> Unit
+) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+        )
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, BorderSubtleDark, RoundedCornerShape(16.dp)),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsCardItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String? = null,
+    trailingText: String? = null,
+    titleColor: Color = MaterialTheme.colorScheme.onSurface,
+    isNavigable: Boolean = false,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (titleColor != MaterialTheme.colorScheme.onSurface) titleColor else MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
+            )
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = titleColor
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (!trailingText.isNullOrBlank()) {
+                Text(
+                    text = trailingText,
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            // SECTION: Support
-            item { SettingsSectionHeader("SUPPORT") }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.HelpOutline,
-                    title = "Help Center",
-                    onClick = showStubMessage
-                )
-            }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Flag,
-                    title = "Report a Problem",
-                    onClick = showStubMessage
-                )
-            }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Feedback,
-                    title = "Send Feedback",
-                    onClick = showStubMessage
-                )
-            }
-
-            // SECTION: About
-            item { SettingsSectionHeader("ABOUT") }
-            item {
-                ListItem(
-                    headlineContent = { Text("App Version") },
-                    leadingContent = { Icon(Icons.Default.Info, contentDescription = null) },
-                    trailingContent = {
-                        Text(
-                            text = "v${BuildConfig.VERSION_NAME}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                )
-            }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Description,
-                    title = "Terms of Service",
-                    onClick = showStubMessage
-                )
-            }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.PrivacyTip,
-                    title = "Privacy Policy",
-                    onClick = showStubMessage
-                )
-            }
-            item {
-                SettingsItem(
-                    icon = Icons.Default.Code,
-                    title = "Open Source Licenses",
-                    onClick = showStubMessage
-                )
-            }
-
-            // SECTION: Danger Zone
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-            item {
-                ListItem(
-                    headlineContent = { Text("Sign Out", color = MaterialTheme.colorScheme.error) },
-                    leadingContent = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    },
-                    modifier = Modifier.clickable { viewModel.onSignOutClick() }
-                )
-            }
-            item {
-                ListItem(
-                    headlineContent = { Text("Delete Account", color = MaterialTheme.colorScheme.error) },
-                    leadingContent = {
-                        Icon(
-                            imageVector = Icons.Default.DeleteForever,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    },
-                    modifier = Modifier.clickable { showStubMessage() }
+            if (isNavigable) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "Navigate",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -300,46 +462,61 @@ fun SettingsScreen(
 }
 
 @Composable
-fun SettingsSectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
-    )
-}
-
-@Composable
-fun SettingsItem(
+fun SettingsSwitchCardItem(
     icon: ImageVector,
     title: String,
-    trailing: @Composable (() -> Unit)? = null,
-    onClick: () -> Unit
-) {
-    ListItem(
-        headlineContent = { Text(title) },
-        leadingContent = { Icon(icon, contentDescription = null) },
-        trailingContent = trailing,
-        modifier = Modifier.clickable(onClick = onClick)
-    )
-}
-
-@Composable
-fun SettingsSwitchItem(
-    icon: ImageVector,
-    title: String,
+    subtitle: String? = null,
     initialValue: Boolean
 ) {
     var checked by remember { mutableStateOf(initialValue) }
-    ListItem(
-        headlineContent = { Text(title) },
-        leadingContent = { Icon(icon, contentDescription = null) },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = null // handled by ListItem click
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { checked = !checked }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
             )
-        },
-        modifier = Modifier.clickable { checked = !checked }
-    )
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Switch(
+            checked = checked,
+            onCheckedChange = { checked = it },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        )
+    }
 }
