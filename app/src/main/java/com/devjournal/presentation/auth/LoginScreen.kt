@@ -90,6 +90,7 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.devjournal.R
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
 
@@ -663,6 +664,8 @@ fun LoginScreen(
                         scope.launch {
                             try {
                                 val credentialManager = CredentialManager.create(context)
+                                val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(serverClientId = webClientId)
+                                    .build()
                                 val googleIdOption = GetGoogleIdOption.Builder()
                                     .setFilterByAuthorizedAccounts(false)
                                     .setServerClientId(webClientId)
@@ -670,6 +673,7 @@ fun LoginScreen(
                                     .build()
 
                                 val request = GetCredentialRequest.Builder()
+                                    .addCredentialOption(signInWithGoogleOption)
                                     .addCredentialOption(googleIdOption)
                                     .build()
 
@@ -681,7 +685,12 @@ fun LoginScreen(
                             } catch (_: GetCredentialCancellationException) {
                                 // User cancelled
                             } catch (e: GetCredentialException) {
-                                viewModel.setErrorMessage("Google Sign-In failed: ${e.message}")
+                                val msg = e.message ?: ""
+                                if (msg.contains("no credentials", ignoreCase = true) || msg.contains("16", ignoreCase = true)) {
+                                    viewModel.setErrorMessage("No Google accounts found on device. Please sign in to a Google account in Android device settings, or sign in with email.")
+                                } else {
+                                    viewModel.setErrorMessage("Google Sign-In failed: ${e.message}")
+                                }
                             } catch (e: Exception) {
                                 viewModel.setErrorMessage("Google Sign-In error: ${e.message}")
                             }
