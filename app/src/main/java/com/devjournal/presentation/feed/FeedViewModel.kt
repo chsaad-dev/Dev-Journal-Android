@@ -39,6 +39,7 @@ data class FeedUiState(
     val allPosts: List<Post> = emptyList(),
     val followingPosts: List<Post> = emptyList(),
     val isLoading: Boolean = true,
+    val isFollowingLoading: Boolean = true,
     val selectedTag: String = "All",
     val availableTags: List<String> = listOf("All", "Android", "Compose", "Kotlin", "Architecture", "Firebase"),
     val isAdmin: Boolean = false,
@@ -103,7 +104,8 @@ class FeedViewModel @Inject constructor(
                             isAdmin = false,
                             likedPostIds = emptySet(),
                             bookmarkedPostIds = emptySet(),
-                            followingPosts = emptyList()
+                            followingPosts = emptyList(),
+                            isFollowingLoading = false
                         )
                     }
                 }
@@ -166,6 +168,7 @@ class FeedViewModel @Inject constructor(
                     val filteredAndSorted = filterAndSortPosts(postsList, state.selectedTag, state.selectedTab)
                     state.copy(
                         followingPosts = postsList,
+                        isFollowingLoading = false,
                         posts = if (state.selectedTab == FeedTab.FOLLOWING) filteredAndSorted else state.posts,
                         isLoading = if (state.selectedTab == FeedTab.FOLLOWING) false else state.isLoading
                     )

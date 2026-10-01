@@ -103,9 +103,6 @@ class MainActivity : ComponentActivity() {
                             onPostClick = { postId ->
                                 navController.navigate("postdetail/$postId")
                             },
-                            onProfileClick = {
-                                navController.navigate("profile")
-                            },
                             onNewPostClick = {
                                 navController.navigate("editor")
                             },
@@ -115,11 +112,23 @@ class MainActivity : ComponentActivity() {
                             onNotificationsClick = {
                                 navController.navigate("notifications")
                             },
-                            onSearchClick = {
-                                navController.navigate("search")
-                            },
                             onAuthorClick = { authorId ->
                                 navController.navigate("profile?uid=$authorId")
+                            },
+                            onDraftClick = { draftId ->
+                                navController.navigate("editor?draftId=$draftId")
+                            },
+                            onSettingsClick = {
+                                navController.navigate("settings")
+                            },
+                            onEditProfileClick = {
+                                navController.navigate("editprofile")
+                            },
+                            onFollowersClick = { uid ->
+                                navController.navigate("followlist/$uid/followers")
+                            },
+                            onFollowingClick = { uid ->
+                                navController.navigate("followlist/$uid/following")
                             }
                         )
                     }

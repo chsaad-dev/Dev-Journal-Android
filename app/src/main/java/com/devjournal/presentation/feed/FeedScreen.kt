@@ -1,9 +1,14 @@
 package com.devjournal.presentation.feed
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,12 +29,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.DynamicFeed
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.DynamicFeed
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.PeopleOutline
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,12 +51,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import com.devjournal.presentation.components.EdgeFadeHorizontalRow
-import com.devjournal.ui.theme.BorderSubtleDark
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -53,59 +65,82 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.material3.SnackbarHostState
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
-import kotlinx.coroutines.launch
+import com.devjournal.presentation.components.EdgeFadeHorizontalRow
+import com.devjournal.presentation.profile.ProfileScreen
+import com.devjournal.presentation.search.SearchScreen
 import com.devjournal.presentation.util.sharePost
+import com.devjournal.ui.theme.BorderSubtleDark
+import kotlinx.coroutines.launch
+
+enum class MainNavTab {
+    HOME,
+    FEED,
+    SEARCH,
+    PROFILE
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
     viewModel: FeedViewModel = hiltViewModel(),
     onPostClick: (String) -> Unit,
-    onProfileClick: () -> Unit,
     onNewPostClick: () -> Unit,
     onEditPostClick: (String) -> Unit = {},
     onNotificationsClick: () -> Unit = {},
-    onSearchClick: () -> Unit = {},
-    onAuthorClick: (String) -> Unit = {}
+    onAuthorClick: (String) -> Unit = {},
+    onDraftClick: (String) -> Unit = {},
+    onSettingsClick: () -> Unit = {},
+    onEditProfileClick: () -> Unit = {},
+    onFollowersClick: (String) -> Unit = {},
+    onFollowingClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val listState = rememberLazyListState()
-    var selectedNavIndex by remember { mutableIntStateOf(0) }
+    val homeListState = rememberLazyListState()
+    val feedListState = rememberLazyListState()
+    var selectedNavTab by rememberSaveable { mutableStateOf(MainNavTab.HOME) }
     var postToDeleteId by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // Trigger loadMorePosts when scrolled near the bottom
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+    // Intercept Back button when not on Home tab
+    BackHandler(enabled = selectedNavTab != MainNavTab.HOME) {
+        selectedNavTab = MainNavTab.HOME
+    }
+
+    // Trigger loadMorePosts when scrolled near the bottom of discovery feed
+    LaunchedEffect(feedListState) {
+        snapshotFlow { feedListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .collect { lastIndex ->
                 if (lastIndex != null && lastIndex >= uiState.posts.size - 3) {
+                    viewModel.loadMorePosts()
+                }
+            }
+    }
+
+    // Trigger loadMorePosts when scrolled near the bottom of home following feed
+    LaunchedEffect(homeListState) {
+        snapshotFlow { homeListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+            .collect { lastIndex ->
+                if (lastIndex != null && lastIndex >= uiState.followingPosts.size - 3) {
                     viewModel.loadMorePosts()
                 }
             }
@@ -126,9 +161,6 @@ fun FeedScreen(
             }
         }
     }
-
-    val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
 
     if (postToDeleteId != null) {
         AlertDialog(
@@ -157,61 +189,37 @@ fun FeedScreen(
     }
 
     Scaffold(
-        snackbarHost = { androidx.compose.material3.SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "DevJournal",
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        ),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                },
-                actions = {
-                    IconButton(onClick = { onSearchClick() }) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = MaterialTheme.colorScheme.onSurface
+            if (selectedNavTab == MainNavTab.HOME || selectedNavTab == MainNavTab.FEED) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "DevJournal",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            ),
+                            color = MaterialTheme.colorScheme.primary
                         )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .padding(end = 12.dp)
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
-                            .clickable { onProfileClick() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (!uiState.currentUserPhotoUrl.isNullOrBlank()) {
-                            AsyncImage(
-                                model = uiState.currentUserPhotoUrl,
-                                contentDescription = "User Avatar",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
+                    },
+                    actions = {
+                        IconButton(onClick = onNotificationsClick) {
                             Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = "User Avatar",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
+                                imageVector = Icons.Outlined.Notifications,
+                                contentDescription = "Notifications",
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    )
                 )
-            )
+            }
         },
         floatingActionButton = {
-            if (uiState.currentUserId != null) {
+            if (uiState.currentUserId != null && (selectedNavTab == MainNavTab.HOME || selectedNavTab == MainNavTab.FEED)) {
                 FloatingActionButton(
                     onClick = onNewPostClick,
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -231,9 +239,35 @@ fun FeedScreen(
                 tonalElevation = 8.dp
             ) {
                 NavigationBarItem(
-                    selected = selectedNavIndex == 0,
-                    onClick = { selectedNavIndex = 0 },
-                    icon = { Icon(Icons.Default.DynamicFeed, contentDescription = "Feed") },
+                    selected = selectedNavTab == MainNavTab.HOME,
+                    onClick = { selectedNavTab = MainNavTab.HOME },
+                    icon = {
+                        Icon(
+                            imageVector = if (selectedNavTab == MainNavTab.HOME) Icons.Filled.Home else Icons.Outlined.Home,
+                            contentDescription = "Home"
+                        )
+                    },
+                    label = { Text("Home") },
+                    colors = NavigationBarItemDefaults.colors(
+                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedTextColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+                NavigationBarItem(
+                    selected = selectedNavTab == MainNavTab.FEED,
+                    onClick = {
+                        selectedNavTab = MainNavTab.FEED
+                        if (uiState.selectedTab == FeedTab.FOLLOWING) {
+                            viewModel.onTabSelected(FeedTab.FOR_YOU)
+                        }
+                    },
+                    icon = {
+                        Icon(
+                            imageVector = if (selectedNavTab == MainNavTab.FEED) Icons.Filled.DynamicFeed else Icons.Outlined.DynamicFeed,
+                            contentDescription = "Feed"
+                        )
+                    },
                     label = { Text("Feed") },
                     colors = NavigationBarItemDefaults.colors(
                         indicatorColor = MaterialTheme.colorScheme.primaryContainer,
@@ -242,13 +276,15 @@ fun FeedScreen(
                     )
                 )
                 NavigationBarItem(
-                    selected = selectedNavIndex == 1,
-                    onClick = {
-                        selectedNavIndex = 1
-                        onNotificationsClick()
+                    selected = selectedNavTab == MainNavTab.SEARCH,
+                    onClick = { selectedNavTab = MainNavTab.SEARCH },
+                    icon = {
+                        Icon(
+                            imageVector = if (selectedNavTab == MainNavTab.SEARCH) Icons.Filled.Search else Icons.Outlined.Search,
+                            contentDescription = "Search"
+                        )
                     },
-                    icon = { Icon(Icons.Default.Notifications, contentDescription = "Notifications") },
-                    label = { Text("Notifications") },
+                    label = { Text("Search") },
                     colors = NavigationBarItemDefaults.colors(
                         indicatorColor = MaterialTheme.colorScheme.primaryContainer,
                         selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -256,12 +292,14 @@ fun FeedScreen(
                     )
                 )
                 NavigationBarItem(
-                    selected = selectedNavIndex == 2,
-                    onClick = {
-                        selectedNavIndex = 2
-                        onProfileClick()
+                    selected = selectedNavTab == MainNavTab.PROFILE,
+                    onClick = { selectedNavTab = MainNavTab.PROFILE },
+                    icon = {
+                        Icon(
+                            imageVector = if (selectedNavTab == MainNavTab.PROFILE) Icons.Filled.Person else Icons.Outlined.Person,
+                            contentDescription = "Profile"
+                        )
                     },
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
                     label = { Text("Profile") },
                     colors = NavigationBarItemDefaults.colors(
                         indicatorColor = MaterialTheme.colorScheme.primaryContainer,
@@ -272,153 +310,336 @@ fun FeedScreen(
             }
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            TabRow(
-                selectedTabIndex = when (uiState.selectedTab) {
-                    FeedTab.FOR_YOU -> 0
-                    FeedTab.TRENDING -> 1
-                    FeedTab.FOLLOWING -> 2
-                },
-                containerColor = MaterialTheme.colorScheme.background,
-                contentColor = MaterialTheme.colorScheme.primary,
-                divider = {
-                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
-                }
-            ) {
-                Tab(
-                    selected = uiState.selectedTab == FeedTab.FOR_YOU,
-                    onClick = { viewModel.onTabSelected(FeedTab.FOR_YOU) },
-                    text = { Text("For You", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
-                )
-                Tab(
-                    selected = uiState.selectedTab == FeedTab.TRENDING,
-                    onClick = { viewModel.onTabSelected(FeedTab.TRENDING) },
-                    text = { Text("Trending", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
-                )
-                Tab(
-                    selected = uiState.selectedTab == FeedTab.FOLLOWING,
-                    onClick = { viewModel.onTabSelected(FeedTab.FOLLOWING) },
-                    text = { Text("Following", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
-                )
-            }
-
-            // Horizontal Tag Filter Chips with edge gradient scroll affordance
-            val tagScrollState = rememberScrollState()
-            EdgeFadeHorizontalRow(
-                scrollState = tagScrollState,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                uiState.availableTags.forEach { tag ->
-                    val isSelected = uiState.selectedTag.equals(tag, ignoreCase = true)
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { viewModel.onTagSelected(tag) },
-                        label = {
-                            Text(
-                                text = if (tag.equals("All", ignoreCase = true)) "#All" else if (tag.startsWith("#")) tag else "#$tag",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
-                            )
-                        },
-                        shape = RoundedCornerShape(10.dp),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = isSelected,
-                            borderColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else BorderSubtleDark,
-                            selectedBorderColor = MaterialTheme.colorScheme.primary,
-                            borderWidth = 1.dp
-                        )
-                    )
-                }
-            }
-
-            // Post list / Loading / Empty state
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+        when (selectedNavTab) {
+            MainNavTab.HOME -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .background(MaterialTheme.colorScheme.background)
                 ) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    if (uiState.currentUserId == null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(72.dp)
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+                                        .border(1.dp, BorderSubtleDark, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Person,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(18.dp))
+                                Text(
+                                    text = "Sign in to see followed authors",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Log in and follow your favorite engineers to personalize your Home feed.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    } else if (uiState.isFollowingLoading) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        }
+                    } else if (uiState.followingPosts.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(72.dp)
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+                                        .border(1.dp, BorderSubtleDark, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.PeopleOutline,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(18.dp))
+                                Text(
+                                    text = "Your Home feed is quiet",
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Follow other engineers and creators to see their latest tutorials, code snippets, and stories here.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Button(
+                                    onClick = {
+                                        selectedNavTab = MainNavTab.FEED
+                                        viewModel.onTabSelected(FeedTab.FOR_YOU)
+                                    },
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                ) {
+                                    Text("Explore Community Feed")
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                                OutlinedButton(
+                                    onClick = { selectedNavTab = MainNavTab.SEARCH },
+                                    shape = RoundedCornerShape(20.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
+                                ) {
+                                    Text("Find Creators to Follow")
+                                }
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            state = homeListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(uiState.followingPosts, key = { it.id }) { post ->
+                                PostCard(
+                                    post = post,
+                                    authorName = uiState.authorNames[post.authorId] ?: "",
+                                    authorPhotoUrl = uiState.authorPhotoUrls[post.authorId] ?: "",
+                                    isLiked = uiState.likedPostIds.contains(post.id),
+                                    isBookmarked = uiState.bookmarkedPostIds.contains(post.id),
+                                    onLikeClick = {
+                                        if (uiState.currentUserId == null) {
+                                            snackbarHostState.currentSnackbarData?.dismiss()
+                                            coroutineScope.launch { snackbarHostState.showSnackbar("Sign in to like articles") }
+                                        } else {
+                                            viewModel.onLikeClick(post.id, uiState.likedPostIds.contains(post.id))
+                                        }
+                                    },
+                                    onBookmarkClick = {
+                                        if (uiState.currentUserId == null) {
+                                            snackbarHostState.currentSnackbarData?.dismiss()
+                                            coroutineScope.launch { snackbarHostState.showSnackbar("Sign in to save articles") }
+                                        } else {
+                                            viewModel.onBookmarkClick(post.id, uiState.bookmarkedPostIds.contains(post.id))
+                                        }
+                                    },
+                                    onCommentClick = { onPostClick(post.id) },
+                                    onShareClick = { sharePost(context, post) },
+                                    onPostClick = { onPostClick(post.id) },
+                                    canEdit = uiState.isAdmin || (uiState.currentUserId != null && post.authorId == uiState.currentUserId),
+                                    canDelete = uiState.isAdmin || (uiState.currentUserId != null && post.authorId == uiState.currentUserId),
+                                    onEditClick = { onEditPostClick(post.id) },
+                                    onDeleteClick = { postToDeleteId = post.id },
+                                    onAuthorClick = onAuthorClick
+                                )
+                            }
+                        }
+                    }
                 }
-            } else if (uiState.posts.isEmpty()) {
+            }
+            MainNavTab.FEED -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .background(MaterialTheme.colorScheme.background)
+                ) {
+                    TabRow(
+                        selectedTabIndex = if (uiState.selectedTab == FeedTab.TRENDING) 1 else 0,
+                        containerColor = MaterialTheme.colorScheme.background,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        divider = {
+                            HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                        }
+                    ) {
+                        Tab(
+                            selected = uiState.selectedTab == FeedTab.FOR_YOU,
+                            onClick = { viewModel.onTabSelected(FeedTab.FOR_YOU) },
+                            text = { Text("For You", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
+                        )
+                        Tab(
+                            selected = uiState.selectedTab == FeedTab.TRENDING,
+                            onClick = { viewModel.onTabSelected(FeedTab.TRENDING) },
+                            text = { Text("Trending", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
+                        )
+                    }
+
+                    // Horizontal Tag Filter Chips with edge gradient scroll affordance
+                    val tagScrollState = rememberScrollState()
+                    EdgeFadeHorizontalRow(
+                        scrollState = tagScrollState,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        uiState.availableTags.forEach { tag ->
+                            val isSelected = uiState.selectedTag.equals(tag, ignoreCase = true)
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { viewModel.onTagSelected(tag) },
+                                label = {
+                                    Text(
+                                        text = if (tag.equals("All", ignoreCase = true)) "#All" else if (tag.startsWith("#")) tag else "#$tag",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+                                    )
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = isSelected,
+                                    borderColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else BorderSubtleDark,
+                                    selectedBorderColor = MaterialTheme.colorScheme.primary,
+                                    borderWidth = 1.dp
+                                )
+                            )
+                        }
+                    }
+
+                    // Post list / Loading / Empty state
+                    if (uiState.isLoading) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        }
+                    } else if (uiState.posts.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "No articles found",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Try switching to another category or check back later.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            state = feedListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(uiState.posts, key = { it.id }) { post ->
+                                PostCard(
+                                    post = post,
+                                    authorName = uiState.authorNames[post.authorId] ?: "",
+                                    authorPhotoUrl = uiState.authorPhotoUrls[post.authorId] ?: "",
+                                    isLiked = uiState.likedPostIds.contains(post.id),
+                                    isBookmarked = uiState.bookmarkedPostIds.contains(post.id),
+                                    onLikeClick = {
+                                        if (uiState.currentUserId == null) {
+                                            snackbarHostState.currentSnackbarData?.dismiss()
+                                            coroutineScope.launch { snackbarHostState.showSnackbar("Sign in to like articles") }
+                                        } else {
+                                            viewModel.onLikeClick(post.id, uiState.likedPostIds.contains(post.id))
+                                        }
+                                    },
+                                    onBookmarkClick = {
+                                        if (uiState.currentUserId == null) {
+                                            snackbarHostState.currentSnackbarData?.dismiss()
+                                            coroutineScope.launch { snackbarHostState.showSnackbar("Sign in to save articles") }
+                                        } else {
+                                            viewModel.onBookmarkClick(post.id, uiState.bookmarkedPostIds.contains(post.id))
+                                        }
+                                    },
+                                    onCommentClick = { onPostClick(post.id) },
+                                    onShareClick = { sharePost(context, post) },
+                                    onPostClick = { onPostClick(post.id) },
+                                    canEdit = uiState.isAdmin || (uiState.currentUserId != null && post.authorId == uiState.currentUserId),
+                                    canDelete = uiState.isAdmin || (uiState.currentUserId != null && post.authorId == uiState.currentUserId),
+                                    onEditClick = { onEditPostClick(post.id) },
+                                    onDeleteClick = { postToDeleteId = post.id },
+                                    onAuthorClick = onAuthorClick
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            MainNavTab.SEARCH -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(bottom = paddingValues.calculateBottomPadding())
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = if (uiState.selectedTab == FeedTab.FOLLOWING) {
-                                if (uiState.currentUserId == null) "Sign in to see followed authors"
-                                else "No posts from followed creators"
-                            } else "No articles found",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = if (uiState.selectedTab == FeedTab.FOLLOWING) {
-                                if (uiState.currentUserId == null) "Log in and follow your favorite engineers to personalize your feed."
-                                else "Follow other engineers to see their latest posts here."
-                            } else "Try switching to another category or check back later.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                    SearchScreen(
+                        onPostClick = onPostClick,
+                        onUserClick = onAuthorClick,
+                        onBackClick = { selectedNavTab = MainNavTab.HOME },
+                        showBackButton = false
+                    )
                 }
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+            }
+            MainNavTab.PROFILE -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = paddingValues.calculateBottomPadding())
                 ) {
-                    items(uiState.posts, key = { it.id }) { post ->
-                        PostCard(
-                            post = post,
-                            authorName = uiState.authorNames[post.authorId] ?: "",
-                            authorPhotoUrl = uiState.authorPhotoUrls[post.authorId] ?: "",
-                            isLiked = uiState.likedPostIds.contains(post.id),
-                            isBookmarked = uiState.bookmarkedPostIds.contains(post.id),
-                            onLikeClick = {
-                                if (uiState.currentUserId == null) {
-                                    snackbarHostState.currentSnackbarData?.dismiss()
-                                    coroutineScope.launch { snackbarHostState.showSnackbar("Sign in to like articles") }
-                                } else {
-                                    viewModel.onLikeClick(post.id, uiState.likedPostIds.contains(post.id))
-                                }
-                            },
-                            onBookmarkClick = {
-                                if (uiState.currentUserId == null) {
-                                    snackbarHostState.currentSnackbarData?.dismiss()
-                                    coroutineScope.launch { snackbarHostState.showSnackbar("Sign in to save articles") }
-                                } else {
-                                    viewModel.onBookmarkClick(post.id, uiState.bookmarkedPostIds.contains(post.id))
-                                }
-                            },
-                            onCommentClick = { onPostClick(post.id) },
-                            onShareClick = { sharePost(context, post) },
-                            onPostClick = { onPostClick(post.id) },
-                            canEdit = uiState.isAdmin || (uiState.currentUserId != null && post.authorId == uiState.currentUserId),
-                            canDelete = uiState.isAdmin || (uiState.currentUserId != null && post.authorId == uiState.currentUserId),
-                            onEditClick = { onEditPostClick(post.id) },
-                            onDeleteClick = { postToDeleteId = post.id },
-                            onAuthorClick = onAuthorClick
-                        )
-                    }
+                    ProfileScreen(
+                        onPostClick = onPostClick,
+                        onDraftClick = onDraftClick,
+                        onSettingsClick = onSettingsClick,
+                        onEditProfileClick = onEditProfileClick,
+                        onFollowersClick = onFollowersClick,
+                        onFollowingClick = onFollowingClick,
+                        onBackClick = { selectedNavTab = MainNavTab.HOME },
+                        showBackButton = false
+                    )
                 }
             }
         }

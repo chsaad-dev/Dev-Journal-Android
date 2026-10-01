@@ -89,7 +89,8 @@ fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
     onPostClick: (String) -> Unit,
     onUserClick: (String) -> Unit = {},
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit = {},
+    showBackButton: Boolean = true
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusRequester = remember { FocusRequester() }
@@ -97,7 +98,9 @@ fun SearchScreen(
     val tagScrollState = rememberScrollState()
 
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        if (showBackButton) {
+            focusRequester.requestFocus()
+        }
     }
 
     Scaffold(
@@ -153,12 +156,14 @@ fun SearchScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                    if (showBackButton) {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

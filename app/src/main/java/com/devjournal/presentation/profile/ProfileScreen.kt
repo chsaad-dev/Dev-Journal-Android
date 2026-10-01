@@ -90,7 +90,8 @@ fun ProfileScreen(
     onEditProfileClick: () -> Unit = {},
     onFollowersClick: (String) -> Unit = {},
     onFollowingClick: (String) -> Unit = {},
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    showBackButton: Boolean = true
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val profile = uiState.profile
@@ -116,11 +117,13 @@ fun ProfileScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                    if (showBackButton && !uiState.isOwnProfile) {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
                     }
                 },
                 actions = {
