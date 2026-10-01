@@ -1,6 +1,7 @@
 package com.devjournal.presentation.profile
 
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,6 +12,7 @@ import com.devjournal.data.remote.NotifyWorkerApi
 import com.devjournal.domain.usecase.FollowUserUseCase
 import com.devjournal.domain.usecase.GetBookmarkedPostsUseCase
 import com.devjournal.domain.usecase.GetLikedPostsUseCase
+import com.devjournal.domain.usecase.GetPostsByAuthorUseCase
 import com.devjournal.domain.usecase.GetUserProfileUseCase
 import com.devjournal.domain.usecase.GetRemoteDraftsUseCase
 import com.devjournal.domain.usecase.IsFollowingUseCase
@@ -31,6 +33,7 @@ import javax.inject.Inject
 
 data class ProfileUiState(
     val profile: UserProfile? = null,
+    val authorPosts: List<Post> = emptyList(),
     val likedPosts: List<Post> = emptyList(),
     val bookmarkedPosts: List<Post> = emptyList(),
     val remoteDrafts: List<Post> = emptyList(),
@@ -54,6 +57,7 @@ data class ProfileUiState(
 class ProfileViewModel @Inject constructor(
     private val getUserProfileUseCase: GetUserProfileUseCase,
     private val updateUserProfileUseCase: UpdateUserProfileUseCase,
+    private val getPostsByAuthorUseCase: GetPostsByAuthorUseCase,
     private val getLikedPostsUseCase: GetLikedPostsUseCase,
     private val getBookmarkedPostsUseCase: GetBookmarkedPostsUseCase,
     private val cloudinaryUploader: CloudinaryUploader,
@@ -92,6 +96,7 @@ class ProfileViewModel @Inject constructor(
                             likedPosts = emptyList(),
                             bookmarkedPosts = emptyList(),
                             remoteDrafts = emptyList(),
+                            authorPosts = emptyList(),
                             profile = null
                         )
                     }
@@ -153,6 +158,14 @@ class ProfileViewModel @Inject constructor(
                     followingCount = existingProfile.followingCount,
                     isLoading = false
                 )
+            }
+
+            launch {
+                getPostsByAuthorUseCase(uid)
+                    .catch { /* ignore */ }
+                    .collect { posts ->
+                        _uiState.update { it.copy(authorPosts = posts) }
+                    }
             }
 
             launch {
@@ -223,13 +236,14 @@ class ProfileViewModel @Inject constructor(
                 }
             }
             
-            result.onFailure {
+            result.onFailure { error ->
+                Log.e("DevJournalFollow", "Follow action failed: ${error.message}", error)
                 // Revert on failure
                 _uiState.update { 
                     it.copy(
                         isFollowing = currentlyFollowing,
                         followerCount = it.followerCount + if (currentlyFollowing) 1 else -1,
-                        errorMessage = "Failed to update follow status"
+                        errorMessage = "Failed to update follow: ${error.localizedMessage ?: error.message}"
                     ) 
                 }
             }

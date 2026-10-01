@@ -49,6 +49,7 @@ class UserRepositoryImpl @Inject constructor(
         }.await()
         Result.success(Unit)
     } catch (e: Exception) {
+        android.util.Log.e("DevJournalFollow", "Error in followUser: ${e.message}", e)
         Result.failure(e)
     }
 
@@ -67,6 +68,7 @@ class UserRepositoryImpl @Inject constructor(
         }.await()
         Result.success(Unit)
     } catch (e: Exception) {
+        android.util.Log.e("DevJournalFollow", "Error in unfollowUser: ${e.message}", e)
         Result.failure(e)
     }
 

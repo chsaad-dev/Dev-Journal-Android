@@ -48,6 +48,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -55,6 +57,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -91,16 +94,24 @@ fun ProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val profile = uiState.profile
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { error ->
+            snackbarHostState.showSnackbar(error)
+        }
+    }
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Liked", "Saved", "Drafts")
+    val tabs = listOf("Articles", "Liked", "Saved", "Drafts")
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Profile",
+                        text = if (uiState.isOwnProfile) "Profile" else (profile?.name?.ifBlank { "Author" } ?: "Author"),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 },
@@ -368,7 +379,7 @@ fun ProfileScreen(
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // Tabs Row (Liked, Saved, Drafts)
+                        // Tabs Row for own profile, or Section Header for another author's profile
                         if (uiState.isOwnProfile) {
                             SecondaryTabRow(
                                 selectedTabIndex = selectedTabIndex,
@@ -389,17 +400,108 @@ fun ProfileScreen(
                                     )
                                 }
                             }
+                        } else {
+                            // Another author's profile: Section Header like Instagram posts tab
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Description,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Articles",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    ) {
+                                        Text(
+                                            text = uiState.authorPosts.size.toString(),
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
                         }
                     }
                 }
 
                 // Grid Content Items
                 if (uiState.isOwnProfile) {
-                    val isDrafts = selectedTabIndex == 2
-                    val postsToShow = if (selectedTabIndex == 0) uiState.likedPosts else uiState.bookmarkedPosts
+                    val isDrafts = selectedTabIndex == 3
+                    val postsToShow = when (selectedTabIndex) {
+                        0 -> uiState.authorPosts
+                        1 -> uiState.likedPosts
+                        2 -> uiState.bookmarkedPosts
+                        else -> emptyList()
+                    }
                     val draftsToShow = uiState.remoteDrafts
 
                     if ((!isDrafts && postsToShow.isEmpty()) || (isDrafts && draftsToShow.isEmpty())) {
+                        item(span = { GridItemSpan(2) }) {
+                            val emptyMsg = when (selectedTabIndex) {
+                                0 -> "No published articles yet. Tap '+' to write your first journal!"
+                                1 -> "No liked articles yet."
+                                2 -> "No saved articles yet."
+                                else -> "No saved drafts yet."
+                            }
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 24.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = emptyMsg,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    } else if (isDrafts) {
+                        items(draftsToShow, key = { "draft_${it.id}" }) { draft ->
+                            ProfilePostGridCard(
+                                post = draft,
+                                badgeText = "Draft",
+                                onClick = { onDraftClick(draft.id) }
+                            )
+                        }
+                    } else {
+                        items(postsToShow, key = { "post_${it.id}" }) { post ->
+                            ProfilePostGridCard(
+                                post = post,
+                                badgeText = post.tags.firstOrNull(),
+                                onClick = { onPostClick(post.id) }
+                            )
+                        }
+                    }
+                } else {
+                    // Another Author's Profile: Display their published articles like Instagram/Medium
+                    if (uiState.authorPosts.isEmpty()) {
                         item(span = { GridItemSpan(2) }) {
                             Surface(
                                 modifier = Modifier
@@ -414,23 +516,16 @@ fun ProfileScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = if (isDrafts) "No saved drafts yet." else if (selectedTabIndex == 0) "No liked articles yet." else "No saved articles yet.",
+                                        text = "This author hasn't published any articles yet.",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center
                                     )
                                 }
                             }
                         }
-                    } else if (isDrafts) {
-                        items(draftsToShow) { draft ->
-                            ProfilePostGridCard(
-                                post = draft,
-                                badgeText = "Draft",
-                                onClick = { onDraftClick(draft.id) }
-                            )
-                        }
                     } else {
-                        items(postsToShow) { post ->
+                        items(uiState.authorPosts, key = { "author_post_${it.id}" }) { post ->
                             ProfilePostGridCard(
                                 post = post,
                                 badgeText = post.tags.firstOrNull(),
