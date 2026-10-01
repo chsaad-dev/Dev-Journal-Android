@@ -1,6 +1,8 @@
 package com.devjournal.presentation.feed
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,29 +19,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.ChatBubbleOutline
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +37,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.devjournal.data.model.Post
+import com.devjournal.presentation.components.BottomImageScrim
+import com.devjournal.presentation.components.PostActionMenu
+import com.devjournal.presentation.components.PostStatsBar
+import com.devjournal.ui.theme.BorderSubtleDark
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -73,11 +63,11 @@ fun PostCard(
     onDeleteClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    var showMenu by remember { mutableStateOf(false) }
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, BorderSubtleDark, RoundedCornerShape(16.dp))
             .clickable { onPostClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
@@ -86,7 +76,7 @@ fun PostCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Cover Image with Tag Overlay
+            // Cover Image with Scrim and Tag Overlay
             if (post.coverImageUrl.isNotBlank()) {
                 Box(
                     modifier = Modifier
@@ -101,14 +91,21 @@ fun PostCard(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    // Bottom scrim to lift the tag chip
+                    BottomImageScrim(
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                        height = 64.dp,
+                        maxAlpha = 0.75f
+                    )
+
                     // Tag chip overlay
-                    val primaryTag = post.tags.firstOrNull() ?: "General"
+                    val primaryTag = post.tags.firstOrNull() ?: "Engineering"
                     Surface(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(12.dp),
                         shape = RoundedCornerShape(8.dp),
-                        color = Color.Black.copy(alpha = 0.65f)
+                        color = Color.Black.copy(alpha = 0.70f)
                     ) {
                         Text(
                             text = if (primaryTag.startsWith("#")) primaryTag else "#$primaryTag",
@@ -123,9 +120,9 @@ fun PostCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
-                // Author row
+                // Author row (Compact, professional byline)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -143,6 +140,7 @@ fun PostCard(
                             ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Author Avatar with subtle border ring
                         if (authorPhotoUrl.isNotBlank()) {
                             AsyncImage(
                                 model = authorPhotoUrl,
@@ -151,20 +149,22 @@ fun PostCard(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
+                                    .border(1.dp, BorderSubtleDark, CircleShape)
                             )
                         } else {
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .border(1.dp, BorderSubtleDark, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.AccountCircle,
                                     contentDescription = "Author Avatar",
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(34.dp)
                                 )
                             }
                         }
@@ -172,54 +172,43 @@ fun PostCard(
                         Spacer(modifier = Modifier.width(10.dp))
 
                         Column {
+                            val displayName = if (authorName.isNotBlank()) {
+                                authorName
+                            } else if (post.authorId.isNotBlank()) {
+                                "Developer (${post.authorId.take(6)})"
+                            } else {
+                                "DevJournal Author"
+                            }
+
                             Text(
-                                text = if (authorName.isNotBlank()) "Author: $authorName" else if (post.authorId.isNotBlank()) "Author: ${post.authorId.take(8)}" else "DevJournal Author",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurface
+                                text = displayName,
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
-                            Text(
-                                text = formatTimestamp(post.createdAt?.toDate()?.time),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = formatTimestamp(post.createdAt?.toDate()?.time),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = " • ${post.readTimeMinutes.coerceAtLeast(1)} min read",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                )
+                            }
                         }
                     }
 
-                        if (canEdit || canDelete) {
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "More",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
-                            ) {
-                                if (canEdit) {
-                                    DropdownMenuItem(
-                                        text = { Text("Edit Post") },
-                                        onClick = {
-                                            showMenu = false
-                                            onEditClick?.invoke()
-                                        }
-                                    )
-                                }
-                                if (canDelete) {
-                                    DropdownMenuItem(
-                                        text = { Text("Delete Post") },
-                                        onClick = {
-                                            showMenu = false
-                                            onDeleteClick?.invoke()
-                                        },
-                                        leadingIcon = {
-                                            Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                                        }
-                                    )
-                                }
-                            }
-                        }
+                    // Anchored 3-dot menu with icon parity (Edit & Delete both have icons)
+                    PostActionMenu(
+                        canEdit = canEdit,
+                        canDelete = canDelete,
+                        onEditClick = onEditClick,
+                        onDeleteClick = onDeleteClick
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -227,9 +216,9 @@ fun PostCard(
                 // Post Title
                 Text(
                     text = post.title,
-                    style = MaterialTheme.typography.titleLarge.copy(
+                    style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        lineHeight = 26.sp
+                        lineHeight = 22.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
@@ -243,92 +232,59 @@ fun PostCard(
                 if (displayText.isNotBlank()) {
                     Text(
                         text = displayText,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            lineHeight = 18.sp
+                        ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Bottom actions row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Like Button
-                        IconButton(onClick = onLikeClick) {
-                            Icon(
-                                imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = if (isLiked) "Unlike" else "Like",
-                                tint = if (isLiked) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Text(
-                            text = "${post.likeCount}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.width(16.dp))
-
-                        // Comment Button
-                        IconButton(onClick = onCommentClick) {
-                            Icon(
-                                imageVector = Icons.Default.ChatBubbleOutline,
-                                contentDescription = "Comments",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Text(
-                            text = "${post.commentCount}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.width(16.dp))
-
-                        // View Count (Social style)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Visibility,
-                                contentDescription = "Views",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = formatPostCount(post.viewCount),
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    // Bookmark and Share Buttons
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onBookmarkClick) {
-                            Icon(
-                                imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                                contentDescription = if (isBookmarked) "Unbookmark" else "Bookmark",
-                                tint = if (isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        
-                        IconButton(onClick = onShareClick) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = "Share",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                // Tag chips for text-only posts
+                if (post.coverImageUrl.isBlank() && post.tags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        post.tags.take(3).forEach { tag ->
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.7f),
+                                border = BorderStroke(1.dp, BorderSubtleDark)
+                            ) {
+                                Text(
+                                    text = if (tag.startsWith("#")) tag else "#$tag",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Medium,
+                                        letterSpacing = 0.1.sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Unified Social Stats Bar
+                PostStatsBar(
+                    likeCount = post.likeCount,
+                    isLiked = isLiked,
+                    onLikeClick = onLikeClick,
+                    commentCount = post.commentCount,
+                    onCommentClick = onCommentClick,
+                    viewCount = post.viewCount,
+                    onViewsClick = null,
+                    isBookmarked = isBookmarked,
+                    onBookmarkClick = onBookmarkClick,
+                    onShareClick = onShareClick,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
@@ -348,13 +304,5 @@ private fun formatTimestamp(timeMs: Long?): String {
         hours < 24 -> "${hours}h ago"
         days < 7 -> "${days}d ago"
         else -> SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(timeMs)
-    }
-}
-
-private fun formatPostCount(count: Int): String {
-    return when {
-        count >= 1_000_000 -> String.format(Locale.getDefault(), "%.1fM", count / 1_000_000.0)
-        count >= 1_000 -> String.format(Locale.getDefault(), "%.1fK", count / 1_000.0)
-        else -> count.toString()
     }
 }

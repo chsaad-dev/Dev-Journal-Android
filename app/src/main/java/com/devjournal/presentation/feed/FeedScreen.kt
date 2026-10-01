@@ -36,9 +36,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import com.devjournal.presentation.components.EdgeFadeHorizontalRow
+import com.devjournal.ui.theme.BorderSubtleDark
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -167,15 +170,6 @@ fun FeedScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                 },
-                navigationIcon = {
-                    IconButton(onClick = { /* Navigation Menu */ }) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = "Navigation Menu",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                },
                 actions = {
                     IconButton(onClick = { onSearchClick() }) {
                         Icon(
@@ -291,7 +285,10 @@ fun FeedScreen(
                     FeedTab.FOLLOWING -> 2
                 },
                 containerColor = MaterialTheme.colorScheme.background,
-                contentColor = MaterialTheme.colorScheme.primary
+                contentColor = MaterialTheme.colorScheme.primary,
+                divider = {
+                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                }
             ) {
                 Tab(
                     selected = uiState.selectedTab == FeedTab.FOR_YOU,
@@ -310,12 +307,11 @@ fun FeedScreen(
                 )
             }
 
-            // Horizontal Tag Filter Chips
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            // Horizontal Tag Filter Chips with edge gradient scroll affordance
+            val tagScrollState = rememberScrollState()
+            EdgeFadeHorizontalRow(
+                scrollState = tagScrollState,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 uiState.availableTags.forEach { tag ->
@@ -325,8 +321,8 @@ fun FeedScreen(
                         onClick = { viewModel.onTagSelected(tag) },
                         label = {
                             Text(
-                                text = if (tag.equals("All", ignoreCase = true)) "#All" else "#$tag",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium)
+                                text = if (tag.equals("All", ignoreCase = true)) "#All" else if (tag.startsWith("#")) tag else "#$tag",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
                             )
                         },
                         shape = RoundedCornerShape(10.dp),
@@ -335,6 +331,13 @@ fun FeedScreen(
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isSelected,
+                            borderColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else BorderSubtleDark,
+                            selectedBorderColor = MaterialTheme.colorScheme.primary,
+                            borderWidth = 1.dp
                         )
                     )
                 }
@@ -380,7 +383,7 @@ fun FeedScreen(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(uiState.posts, key = { it.id }) { post ->
