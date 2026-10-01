@@ -21,10 +21,70 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override suspend fun createOrUpdateUserProfile(profile: UserProfile) {
+        val cleanProfile = profile.copy(
+            username = profile.username.trim().lowercase()
+        )
         firestore.collection("users")
-            .document(profile.uid)
-            .set(profile, SetOptions.merge())
+            .document(cleanProfile.uid)
+            .set(cleanProfile, SetOptions.merge())
             .await()
+    }
+
+    override fun observeUserProfile(uid: String): Flow<UserProfile?> = callbackFlow {
+        if (uid.isBlank()) {
+            trySend(null)
+            close()
+            return@callbackFlow
+        }
+        val docRef = firestore.collection("users").document(uid)
+        val subscription = docRef.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                android.util.Log.e("DevJournalUser", "Error observing user profile: ${error.message}", error)
+                trySend(null)
+                return@addSnapshotListener
+            }
+            val profile = snapshot?.toObject(UserProfile::class.java)
+            trySend(profile)
+        }
+        awaitClose { subscription.remove() }
+    }
+
+    override suspend fun isUsernameAvailable(username: String, currentUid: String): Boolean {
+        val cleanUsername = username.trim().lowercase()
+        if (cleanUsername.length < 3) return false
+        val snapshot = firestore.collection("users")
+            .whereEqualTo("username", cleanUsername)
+            .limit(1)
+            .get()
+            .await()
+        if (snapshot.isEmpty) return true
+        val matchedDoc = snapshot.documents.firstOrNull()
+        return matchedDoc?.id == currentUid
+    }
+
+    override suspend fun searchUsers(query: String): List<UserProfile> {
+        val cleanQuery = query.trim().lowercase()
+        if (cleanQuery.isBlank()) {
+            val snapshot = firestore.collection("users")
+                .orderBy("followerCount", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(20)
+                .get()
+                .await()
+            return snapshot.documents.mapNotNull { it.toObject(UserProfile::class.java) }
+        }
+
+        // Fetch up to 50 users and match by username, displayUsername, or name
+        val snapshot = firestore.collection("users")
+            .limit(50)
+            .get()
+            .await()
+
+        val allUsers = snapshot.documents.mapNotNull { it.toObject(UserProfile::class.java) }
+        return allUsers.filter { user ->
+            user.username.lowercase().contains(cleanQuery) ||
+            user.displayUsername.lowercase().contains(cleanQuery) ||
+            user.name.lowercase().contains(cleanQuery)
+        }
     }
 
     override suspend fun updateFcmToken(uid: String, token: String) {

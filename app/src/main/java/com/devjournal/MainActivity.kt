@@ -226,6 +226,9 @@ class MainActivity : ComponentActivity() {
                             onPostClick = { postId ->
                                 navController.navigate("postdetail/$postId")
                             },
+                            onUserClick = { userId ->
+                                navController.navigate("profile?uid=$userId")
+                            },
                             onBackClick = {
                                 navController.popBackStack()
                             }

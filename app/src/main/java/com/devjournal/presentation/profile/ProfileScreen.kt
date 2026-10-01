@@ -239,7 +239,18 @@ fun ProfileScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
 
-                        // Email / Handle
+                        // Handle / Username
+                        val handle = profile?.displayUsername
+                        if (!handle.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "@$handle",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        // Email
                         if (!profile?.email.isNullOrBlank()) {
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(

@@ -85,6 +85,7 @@ fun EditProfileScreen(
         if (profile != null && uiState.editName.isBlank()) {
             viewModel.onNameChange(profile.name)
             viewModel.onBioChange(profile.bio)
+            viewModel.onUsernameChange(profile.displayUsername)
         }
     }
 
@@ -108,14 +109,20 @@ fun EditProfileScreen(
                 actions = {
                     Button(
                         onClick = {
-                            if (uiState.editName.trim().isNotBlank()) {
-                                viewModel.onSaveClick()
+                            if (uiState.editName.trim().isBlank()) {
+                                Toast.makeText(context, "Name cannot be empty", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            if (uiState.editUsername.trim().isBlank()) {
+                                Toast.makeText(context, "Username cannot be empty", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+                            viewModel.onSaveClick(onSuccess = {
                                 Toast.makeText(context, "Profile updated successfully", Toast.LENGTH_SHORT).show()
                                 onBackClick()
-                            } else {
-                                Toast.makeText(context, "Name cannot be empty", Toast.LENGTH_SHORT).show()
-                            }
+                            })
                         },
+                        enabled = !uiState.isCheckingUsername,
                         shape = RoundedCornerShape(20.dp),
                         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -123,10 +130,18 @@ fun EditProfileScreen(
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     ) {
-                        Text(
-                            text = "Save",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                        )
+                        if (uiState.isCheckingUsername) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        } else {
+                            Text(
+                                text = "Save",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                 },
@@ -259,6 +274,54 @@ fun EditProfileScreen(
                                 )
                             },
                             singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = BorderSubtleDark,
+                                focusedContainerColor = MaterialTheme.colorScheme.background,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.6f)
+                            )
+                        )
+                    }
+
+                    // Username Field
+                    Column {
+                        Text(
+                            text = "USERNAME",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        )
+                        OutlinedTextField(
+                            value = uiState.editUsername,
+                            onValueChange = viewModel::onUsernameChange,
+                            placeholder = { Text("username") },
+                            leadingIcon = {
+                                Text(
+                                    text = "@",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(start = 12.dp, end = 4.dp)
+                                )
+                            },
+                            singleLine = true,
+                            isError = uiState.usernameError != null,
+                            supportingText = {
+                                if (uiState.usernameError != null) {
+                                    Text(
+                                        text = uiState.usernameError ?: "",
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Unique handle for search & profile. 3-20 chars (letters, numbers, _)",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(

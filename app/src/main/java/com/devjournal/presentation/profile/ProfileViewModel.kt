@@ -9,6 +9,7 @@ import com.devjournal.data.model.Post
 import com.devjournal.data.model.UserProfile
 import com.devjournal.data.remote.CloudinaryUploader
 import com.devjournal.data.remote.NotifyWorkerApi
+import com.devjournal.domain.usecase.CheckUsernameAvailabilityUseCase
 import com.devjournal.domain.usecase.FollowUserUseCase
 import com.devjournal.domain.usecase.GetBookmarkedPostsUseCase
 import com.devjournal.domain.usecase.GetLikedPostsUseCase
@@ -17,6 +18,7 @@ import com.devjournal.domain.usecase.GetUserProfileUseCase
 import com.devjournal.domain.usecase.GetRemoteDraftsUseCase
 import com.devjournal.domain.usecase.IsFollowingUseCase
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
+import com.devjournal.domain.usecase.ObserveUserProfileUseCase
 import com.devjournal.domain.usecase.SignOutUseCase
 import com.devjournal.domain.usecase.UnfollowUserUseCase
 import com.devjournal.domain.usecase.UpdateUserProfileUseCase
@@ -41,11 +43,14 @@ data class ProfileUiState(
     val isEditing: Boolean = false,
     val editName: String = "",
     val editBio: String = "",
+    val editUsername: String = "",
+    val isCheckingUsername: Boolean = false,
+    val usernameError: String? = null,
     val isUploadingPhoto: Boolean = false,
     val isSignedOut: Boolean = false,
     val errorMessage: String? = null,
     
-    // New fields
+    // Followers & Following
     val followerCount: Int = 0,
     val followingCount: Int = 0,
     val isOwnProfile: Boolean = true,
@@ -56,7 +61,9 @@ data class ProfileUiState(
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val getUserProfileUseCase: GetUserProfileUseCase,
+    private val observeUserProfileUseCase: ObserveUserProfileUseCase,
     private val updateUserProfileUseCase: UpdateUserProfileUseCase,
+    private val checkUsernameAvailabilityUseCase: CheckUsernameAvailabilityUseCase,
     private val getPostsByAuthorUseCase: GetPostsByAuthorUseCase,
     private val getLikedPostsUseCase: GetLikedPostsUseCase,
     private val getBookmarkedPostsUseCase: GetBookmarkedPostsUseCase,
@@ -141,23 +148,43 @@ class ProfileViewModel @Inject constructor(
     private fun loadProfileAndPosts(uid: String, email: String?, displayName: String?, photoUrl: String?) {
         profileJob?.cancel()
         profileJob = viewModelScope.launch {
-            val existingProfile = getUserProfileUseCase(uid) ?: UserProfile(
-                uid = uid,
-                email = email ?: "",
-                name = displayName ?: email?.substringBefore("@") ?: "Developer",
-                photoUrl = photoUrl ?: "",
-                role = "reader"
-            )
-
-            _uiState.update {
-                it.copy(
-                    profile = existingProfile,
-                    editName = existingProfile.name,
-                    editBio = existingProfile.bio,
-                    followerCount = existingProfile.followerCount,
-                    followingCount = existingProfile.followingCount,
-                    isLoading = false
-                )
+            // Real-time listener for user profile and follower/following counts
+            launch {
+                observeUserProfileUseCase(uid).collect { observedProfile ->
+                    if (observedProfile != null) {
+                        _uiState.update { current ->
+                            current.copy(
+                                profile = observedProfile,
+                                followerCount = observedProfile.followerCount,
+                                followingCount = observedProfile.followingCount,
+                                editName = if (current.isEditing) current.editName else observedProfile.name,
+                                editBio = if (current.isEditing) current.editBio else observedProfile.bio,
+                                editUsername = if (current.isEditing) current.editUsername else observedProfile.displayUsername,
+                                isLoading = false
+                            )
+                        }
+                    } else if (_uiState.value.profile == null) {
+                        // User document not created yet, supply fallback
+                        val fallback = UserProfile(
+                            uid = uid,
+                            email = email ?: "",
+                            name = displayName ?: email?.substringBefore("@") ?: "Developer",
+                            photoUrl = photoUrl ?: "",
+                            role = "reader"
+                        )
+                        _uiState.update { current ->
+                            current.copy(
+                                profile = fallback,
+                                followerCount = 0,
+                                followingCount = 0,
+                                editName = fallback.name,
+                                editBio = fallback.bio,
+                                editUsername = fallback.displayUsername,
+                                isLoading = false
+                            )
+                        }
+                    }
+                }
             }
 
             launch {
@@ -207,7 +234,7 @@ class ProfileViewModel @Inject constructor(
         _uiState.update { 
             it.copy(
                 isFollowing = !currentlyFollowing,
-                followerCount = it.followerCount + if (currentlyFollowing) -1 else 1
+                followerCount = (it.followerCount + if (currentlyFollowing) -1 else 1).coerceAtLeast(0)
             ) 
         }
         
@@ -242,7 +269,7 @@ class ProfileViewModel @Inject constructor(
                 _uiState.update { 
                     it.copy(
                         isFollowing = currentlyFollowing,
-                        followerCount = it.followerCount + if (currentlyFollowing) 1 else -1,
+                        followerCount = (it.followerCount + if (currentlyFollowing) 1 else -1).coerceAtLeast(0),
                         errorMessage = "Failed to update follow: ${error.localizedMessage ?: error.message}"
                     ) 
                 }
@@ -257,6 +284,8 @@ class ProfileViewModel @Inject constructor(
                 isEditing = !it.isEditing,
                 editName = currentProfile?.name ?: "",
                 editBio = currentProfile?.bio ?: "",
+                editUsername = currentProfile?.displayUsername ?: "",
+                usernameError = null,
                 errorMessage = null
             )
         }
@@ -269,6 +298,8 @@ class ProfileViewModel @Inject constructor(
                 isEditing = false,
                 editName = currentProfile?.name ?: "",
                 editBio = currentProfile?.bio ?: "",
+                editUsername = currentProfile?.displayUsername ?: "",
+                usernameError = null,
                 errorMessage = null
             )
         }
@@ -282,27 +313,62 @@ class ProfileViewModel @Inject constructor(
         _uiState.update { it.copy(editBio = bio) }
     }
 
-    fun onSaveClick() {
+    fun onUsernameChange(username: String) {
+        val cleaned = username.lowercase().replace(Regex("[^a-z0-9_]"), "")
+        _uiState.update { it.copy(editUsername = cleaned, usernameError = null) }
+    }
+
+    fun onSaveClick(onSuccess: (() -> Unit)? = null) {
         val currentProfile = _uiState.value.profile ?: return
         val newName = _uiState.value.editName.trim()
         val newBio = _uiState.value.editBio.trim()
+        val newUsername = _uiState.value.editUsername.trim().lowercase()
 
         if (newName.isBlank()) {
             _uiState.update { it.copy(errorMessage = "Name cannot be empty") }
             return
         }
 
+        if (newUsername.length < 3 || newUsername.length > 20) {
+            _uiState.update { it.copy(usernameError = "Username must be 3-20 characters long") }
+            return
+        }
+
+        if (!newUsername.matches(Regex("^[a-z0-9_]+$"))) {
+            _uiState.update { it.copy(usernameError = "Username can only contain letters, numbers, and underscores") }
+            return
+        }
+
+        val currentUid = currentAuthUid ?: return
+
         viewModelScope.launch {
-            val updated = currentProfile.copy(name = newName, bio = newBio)
+            // Check availability if username was modified
+            if (newUsername != currentProfile.username.lowercase()) {
+                _uiState.update { it.copy(isCheckingUsername = true) }
+                val isAvailable = checkUsernameAvailabilityUseCase(newUsername, currentUid)
+                _uiState.update { it.copy(isCheckingUsername = false) }
+                if (!isAvailable) {
+                    _uiState.update { it.copy(usernameError = "Username @$newUsername is already taken") }
+                    return@launch
+                }
+            }
+
+            val updated = currentProfile.copy(
+                name = newName,
+                bio = newBio,
+                username = newUsername
+            )
             try {
                 updateUserProfileUseCase(updated)
                 _uiState.update {
                     it.copy(
                         profile = updated,
                         isEditing = false,
+                        usernameError = null,
                         errorMessage = null
                     )
                 }
+                onSuccess?.invoke()
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(errorMessage = "Failed to update profile: ${e.localizedMessage}")
