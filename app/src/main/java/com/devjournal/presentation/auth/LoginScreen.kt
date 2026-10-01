@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import com.devjournal.ui.theme.BorderSubtleDark
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -196,7 +197,7 @@ fun LoginScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color(0xFF070B14)
+        color = MaterialTheme.colorScheme.background
     ) {
         Box(
             modifier = Modifier
@@ -275,8 +276,8 @@ fun LoginScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp)),
-                    color = Color(0xFF0F172A),
-                    border = BorderStroke(1.dp, Color(0xFF1E293B))
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    border = BorderStroke(1.dp, BorderSubtleDark)
                 ) {
                     Row(
                         modifier = Modifier
@@ -367,7 +368,9 @@ fun LoginScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                        unfocusedBorderColor = BorderSubtleDark,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
                     )
                 )
 
@@ -413,7 +416,9 @@ fun LoginScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                        unfocusedBorderColor = BorderSubtleDark,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
                     )
                 )
 
@@ -542,8 +547,8 @@ fun LoginScreen(
                                 .height(50.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
                             )
                         ) {
                             Text(
@@ -686,9 +691,9 @@ fun LoginScreen(
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color(0xFF334155)),
+                    border = BorderStroke(1.dp, BorderSubtleDark),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color(0xFF0F172A)
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
                     ),
                     enabled = !uiState.isLoading
                 ) {
