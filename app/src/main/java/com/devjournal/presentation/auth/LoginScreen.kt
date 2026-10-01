@@ -81,12 +81,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.util.Log
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.devjournal.R
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
@@ -663,36 +668,47 @@ fun LoginScreen(
                     onClick = {
                         scope.launch {
                             try {
-                                val credentialManager = CredentialManager.create(context)
+                                val activity = context.findActivity() ?: context
+                                val credentialManager = CredentialManager.create(activity)
                                 val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(serverClientId = webClientId)
-                                    .build()
-                                val googleIdOption = GetGoogleIdOption.Builder()
-                                    .setFilterByAuthorizedAccounts(false)
-                                    .setServerClientId(webClientId)
-                                    .setAutoSelectEnabled(false)
                                     .build()
 
                                 val request = GetCredentialRequest.Builder()
                                     .addCredentialOption(signInWithGoogleOption)
-                                    .addCredentialOption(googleIdOption)
                                     .build()
 
-                                val result = credentialManager.getCredential(
-                                    context = context,
-                                    request = request
-                                )
+                                val result = try {
+                                    credentialManager.getCredential(
+                                        context = activity,
+                                        request = request
+                                    )
+                                } catch (e: NoCredentialException) {
+                                    Log.w("DevJournalAuth", "GetSignInWithGoogleOption returned no credentials, trying GetGoogleIdOption fallback", e)
+                                    val fallbackOption = GetGoogleIdOption.Builder()
+                                        .setFilterByAuthorizedAccounts(false)
+                                        .setServerClientId(webClientId)
+                                        .setAutoSelectEnabled(false)
+                                        .build()
+                                    val fallbackRequest = GetCredentialRequest.Builder()
+                                        .addCredentialOption(fallbackOption)
+                                        .build()
+                                    credentialManager.getCredential(
+                                        context = activity,
+                                        request = fallbackRequest
+                                    )
+                                }
                                 handleGoogleCredential(result, viewModel)
                             } catch (_: GetCredentialCancellationException) {
-                                // User cancelled
+                                // User cancelled the chooser - do not show error
+                            } catch (e: NoCredentialException) {
+                                Log.e("DevJournalAuth", "NoCredentialException during Google sign-in", e)
+                                viewModel.setErrorMessage("No eligible credentials found. If this build was just installed, please wait a few moments for Google services to sync, or verify your Google account.")
                             } catch (e: GetCredentialException) {
-                                val msg = e.message ?: ""
-                                if (msg.contains("no credentials", ignoreCase = true) || msg.contains("16", ignoreCase = true)) {
-                                    viewModel.setErrorMessage("No Google accounts found on device. Please sign in to a Google account in Android device settings, or sign in with email.")
-                                } else {
-                                    viewModel.setErrorMessage("Google Sign-In failed: ${e.message}")
-                                }
+                                Log.e("DevJournalAuth", "GetCredentialException during Google sign-in", e)
+                                viewModel.setErrorMessage("Google Sign-In failed: ${e.localizedMessage ?: e.message}")
                             } catch (e: Exception) {
-                                viewModel.setErrorMessage("Google Sign-In error: ${e.message}")
+                                Log.e("DevJournalAuth", "Unexpected exception during Google sign-in", e)
+                                viewModel.setErrorMessage("Google Sign-In error: ${e.localizedMessage ?: e.message}")
                             }
                         }
                     },
@@ -730,6 +746,15 @@ fun LoginScreen(
             }
         }
     }
+}
+
+private fun Context.findActivity(): Activity? {
+    var current = this
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return null
 }
 
 private fun handleGoogleCredential(response: GetCredentialResponse, viewModel: AuthViewModel) {
