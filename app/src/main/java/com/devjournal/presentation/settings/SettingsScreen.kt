@@ -22,7 +22,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.ColorLens
 import androidx.compose.material.icons.outlined.DeleteForever
@@ -85,6 +88,9 @@ fun SettingsScreen(
     onEditProfileClick: () -> Unit = {},
     onPrivacyClick: () -> Unit = {},
     onLinkedAccountsClick: () -> Unit = {},
+    onReportBugClick: () -> Unit = {},
+    onHelpCenterClick: () -> Unit = {},
+    onAppGuideClick: () -> Unit = {},
     onSignedOut: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -349,7 +355,36 @@ fun SettingsScreen(
                 }
             }
 
-            // SECTION 5: DANGER ZONE
+            // SECTION 5: SUPPORT & RESOURCES
+            item {
+                SettingsSection(title = "SUPPORT & RESOURCES") {
+                    SettingsCardItem(
+                        icon = Icons.AutoMirrored.Outlined.HelpOutline,
+                        title = "Help Center",
+                        subtitle = "Frequently asked questions & platform guide",
+                        isNavigable = true,
+                        onClick = onHelpCenterClick
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+                    SettingsCardItem(
+                        icon = Icons.Outlined.BugReport,
+                        title = "Report a Problem",
+                        subtitle = "Found an issue? Send us a bug report with logs",
+                        isNavigable = true,
+                        onClick = onReportBugClick
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+                    SettingsCardItem(
+                        icon = Icons.AutoMirrored.Outlined.MenuBook,
+                        title = "App Guide",
+                        subtitle = "Tour DevJournal core features and workflows",
+                        isNavigable = true,
+                        onClick = onAppGuideClick
+                    )
+                }
+            }
+
+            // SECTION 6: DANGER ZONE
             item {
                 SettingsSection(title = "SESSION & ACCOUNT") {
                     SettingsCardItem(

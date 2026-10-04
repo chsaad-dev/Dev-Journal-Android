@@ -2,6 +2,7 @@ package com.devjournal.presentation.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.devjournal.data.local.AppPreferences
 import com.devjournal.domain.repository.AuthRepository
 import com.devjournal.domain.usecase.GetUserProfileUseCase
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
@@ -29,6 +30,7 @@ data class AuthUiState(
     val successMessage: String? = null,
     val showResendButton: Boolean = false,
     val isAuthenticated: Boolean = false,
+    val shouldShowAppGuide: Boolean = false,
     val isSignUpMode: Boolean = false
 )
 
@@ -43,7 +45,8 @@ class AuthViewModel @Inject constructor(
     private val sendPasswordResetEmailUseCase: SendPasswordResetEmailUseCase,
     private val getUserProfileUseCase: GetUserProfileUseCase,
     private val signOutUseCase: SignOutUseCase,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val appPreferences: AppPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -76,7 +79,14 @@ class AuthViewModel @Inject constructor(
                             }
                         } else {
                             registerFcmTokenForUser(user.uid)
-                            _uiState.update { it.copy(isAuthenticated = true, isLoading = false) }
+                            val hasSeenGuide = appPreferences.getHasSeenAppGuide()
+                            _uiState.update {
+                                it.copy(
+                                    isAuthenticated = true,
+                                    shouldShowAppGuide = !hasSeenGuide,
+                                    isLoading = false
+                                )
+                            }
                         }
                     } else {
                         _uiState.update { it.copy(isAuthenticated = false, isLoading = false) }
@@ -142,7 +152,14 @@ class AuthViewModel @Inject constructor(
                     }
                 } else {
                     registerFcmTokenForUser(user.uid)
-                    _uiState.update { it.copy(isLoading = false, isAuthenticated = true) }
+                    val hasSeenGuide = appPreferences.getHasSeenAppGuide()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isAuthenticated = true,
+                            shouldShowAppGuide = !hasSeenGuide
+                        )
+                    }
                 }
             }.onFailure { error ->
                 val errorMsg = error.localizedMessage ?: "Authentication failed"
@@ -268,7 +285,14 @@ class AuthViewModel @Inject constructor(
                     }
                 } else {
                     registerFcmTokenForUser(user.uid)
-                    _uiState.update { it.copy(isLoading = false, isAuthenticated = true) }
+                    val hasSeenGuide = appPreferences.getHasSeenAppGuide()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isAuthenticated = true,
+                            shouldShowAppGuide = !hasSeenGuide
+                        )
+                    }
                 }
             }.onFailure { error ->
                 _uiState.update { it.copy(isLoading = false, errorMessage = error.localizedMessage ?: "Google sign-in failed") }

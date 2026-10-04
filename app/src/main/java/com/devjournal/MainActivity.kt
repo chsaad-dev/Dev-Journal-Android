@@ -30,6 +30,9 @@ import com.devjournal.presentation.profile.EditProfileScreen
 import com.devjournal.presentation.settings.SettingsScreen
 import com.devjournal.presentation.settings.PrivacySettingsScreen
 import com.devjournal.presentation.settings.LinkedAccountsScreen
+import com.devjournal.presentation.support.ReportBugScreen
+import com.devjournal.presentation.support.HelpCenterScreen
+import com.devjournal.presentation.guide.AppGuideScreen
 import com.devjournal.presentation.search.SearchScreen
 import com.devjournal.presentation.splash.SplashScreen
 import androidx.core.view.WindowCompat
@@ -102,6 +105,11 @@ class MainActivity : ComponentActivity() {
                         LoginScreen(
                             onAuthenticated = {
                                 navController.navigate("feed") {
+                                    popUpTo("login") { inclusive = true }
+                                }
+                            },
+                            onNavigateToAppGuide = {
+                                navController.navigate("app-guide") {
                                     popUpTo("login") { inclusive = true }
                                 }
                             }
@@ -210,9 +218,43 @@ class MainActivity : ComponentActivity() {
                             onLinkedAccountsClick = {
                                 navController.navigate("settings/linked-accounts")
                             },
+                            onReportBugClick = {
+                                navController.navigate("report-bug")
+                            },
+                            onHelpCenterClick = {
+                                navController.navigate("help-center")
+                            },
+                            onAppGuideClick = {
+                                navController.navigate("app-guide")
+                            },
                             onSignedOut = {
                                 navController.navigate("login") {
                                     popUpTo(navController.graph.id) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+                    composable("report-bug") {
+                        ReportBugScreen(
+                            onBackClick = { navController.popBackStack() }
+                        )
+                    }
+                    composable("help-center") {
+                        HelpCenterScreen(
+                            onBackClick = { navController.popBackStack() },
+                            onReportBugClick = { navController.navigate("report-bug") }
+                        )
+                    }
+                    composable("app-guide") {
+                        AppGuideScreen(
+                            onFinish = {
+                                val previousRoute = navController.previousBackStackEntry?.destination?.route
+                                if (previousRoute != null && (previousRoute == "settings" || previousRoute.startsWith("settings"))) {
+                                    navController.popBackStack()
+                                } else {
+                                    navController.navigate("feed") {
+                                        popUpTo("app-guide") { inclusive = true }
+                                    }
                                 }
                             }
                         )

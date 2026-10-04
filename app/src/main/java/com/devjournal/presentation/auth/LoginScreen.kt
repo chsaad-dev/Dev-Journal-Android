@@ -101,7 +101,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun LoginScreen(
     viewModel: AuthViewModel = hiltViewModel(),
-    onAuthenticated: () -> Unit
+    onAuthenticated: () -> Unit,
+    onNavigateToAppGuide: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val email by viewModel.email.collectAsState()
@@ -120,7 +121,11 @@ fun LoginScreen(
 
     LaunchedEffect(uiState.isAuthenticated) {
         if (uiState.isAuthenticated) {
-            onAuthenticated()
+            if (uiState.shouldShowAppGuide) {
+                onNavigateToAppGuide()
+            } else {
+                onAuthenticated()
+            }
         }
     }
 
