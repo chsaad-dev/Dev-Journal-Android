@@ -46,7 +46,10 @@ data class PostDetailUiState(
     val authorName: String = "",
     val authorPhotoUrl: String = "",
     val commenterNames: Map<String, String> = emptyMap(),
+    val commenterUsernames: Map<String, String> = emptyMap(),
     val commenterPhotoUrls: Map<String, String> = emptyMap(),
+    val replyingToComment: Comment? = null,
+    val replyingToAuthorName: String? = null,
     val viewers: List<PostViewer> = emptyList(),
     val isViewersSheetOpen: Boolean = false,
     val isLoadingViewers: Boolean = false
@@ -106,6 +109,7 @@ class PostDetailViewModel @Inject constructor(
         viewModelScope.launch {
             getCommentsUseCase(postId).collect { comments ->
                 val currentNames = _uiState.value.commenterNames.toMutableMap()
+                val currentUsernames = _uiState.value.commenterUsernames.toMutableMap()
                 val currentPhotos = _uiState.value.commenterPhotoUrls.toMutableMap()
                 val missingIds = comments.map { it.userId }.distinct().filter { !currentNames.containsKey(it) && it.isNotBlank() }
                 
@@ -113,11 +117,19 @@ class PostDetailViewModel @Inject constructor(
                     val profile = getUserProfileUseCase(uid)
                     if (profile != null) {
                         if (profile.name.isNotBlank()) currentNames[uid] = profile.name
+                        if (profile.username.isNotBlank()) currentUsernames[uid] = profile.username
                         if (profile.photoUrl.isNotBlank()) currentPhotos[uid] = profile.photoUrl
                     }
                 }
                 
-                _uiState.update { it.copy(comments = comments, commenterNames = currentNames, commenterPhotoUrls = currentPhotos) }
+                _uiState.update { 
+                    it.copy(
+                        comments = comments, 
+                        commenterNames = currentNames, 
+                        commenterUsernames = currentUsernames,
+                        commenterPhotoUrls = currentPhotos
+                    ) 
+                }
             }
         }
     }
@@ -219,10 +231,32 @@ class PostDetailViewModel @Inject constructor(
         _uiState.update { it.copy(commentInput = text, errorMessage = null) }
     }
 
+    fun onReplyToComment(comment: Comment, authorName: String) {
+        val displayName = authorName.ifBlank { "developer" }
+        _uiState.update {
+            it.copy(
+                replyingToComment = comment,
+                replyingToAuthorName = displayName,
+                commentInput = if (it.commentInput.isBlank()) "@$displayName " else it.commentInput
+            )
+        }
+    }
+
+    fun onCancelReply() {
+        _uiState.update {
+            it.copy(
+                replyingToComment = null,
+                replyingToAuthorName = null
+            )
+        }
+    }
+
     fun onSubmitComment() {
         val text = _uiState.value.commentInput.trim()
         val uid = _uiState.value.currentUserId ?: return
         val currentPost = _uiState.value.post ?: return
+        val replyingComment = _uiState.value.replyingToComment
+        val replyingName = _uiState.value.replyingToAuthorName
 
         if (text.isBlank()) return
 
@@ -231,11 +265,21 @@ class PostDetailViewModel @Inject constructor(
             try {
                 val newComment = Comment(
                     userId = uid,
-                    text = text
+                    text = text,
+                    parentCommentId = replyingComment?.id,
+                    replyToUsername = replyingName
                 )
                 addCommentUseCase(postId, newComment)
 
-                if (currentPost.authorId.isNotBlank() && currentPost.authorId != uid) {
+                // Send notification to author or replied commenter
+                if (replyingComment != null && replyingComment.userId != uid) {
+                    notifyWorkerApi.sendNotification(
+                        type = "comment_reply",
+                        targetUid = replyingComment.userId,
+                        title = "Reply to your comment",
+                        body = text.take(100)
+                    )
+                } else if (currentPost.authorId.isNotBlank() && currentPost.authorId != uid) {
                     notifyWorkerApi.sendNotification(
                         type = "new_comment",
                         targetUid = currentPost.authorId,
@@ -243,7 +287,14 @@ class PostDetailViewModel @Inject constructor(
                         body = text.take(100)
                     )
                 }
-                _uiState.update { it.copy(commentInput = "", isSubmittingComment = false) }
+                _uiState.update { 
+                    it.copy(
+                        commentInput = "", 
+                        replyingToComment = null,
+                        replyingToAuthorName = null,
+                        isSubmittingComment = false
+                    ) 
+                }
             } catch (e: Exception) {
                 Log.e("DevJournal", "Comment action failed", e)
                 _uiState.update { it.copy(isSubmittingComment = false, errorMessage = "Failed to post comment: ${e.message}") }

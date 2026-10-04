@@ -57,7 +57,10 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.Scaffold
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
@@ -114,8 +117,27 @@ fun FeedScreen(
     val pagerState = rememberPagerState(initialPage = 0) { 4 }
     var postToDeleteId by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    val homePullRefreshState = rememberPullToRefreshState()
+    val feedPullRefreshState = rememberPullToRefreshState()
+
+    if (homePullRefreshState.isRefreshing) {
+        LaunchedEffect(true) {
+            viewModel.refreshFeed()
+        }
+    }
+    if (feedPullRefreshState.isRefreshing) {
+        LaunchedEffect(true) {
+            viewModel.refreshFeed()
+        }
+    }
+    LaunchedEffect(uiState.isRefreshing) {
+        if (!uiState.isRefreshing) {
+            homePullRefreshState.endRefresh()
+            feedPullRefreshState.endRefresh()
+        }
+    }
 
     // Intercept physical/gesture Back button when not on Home page (directly switch to Home)
     BackHandler(enabled = pagerState.currentPage != 0) {
@@ -342,12 +364,17 @@ fun FeedScreen(
                                 }
                             }
                         ) { homePadding ->
-                            Column(
+                            Box(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .padding(homePadding)
-                                    .background(MaterialTheme.colorScheme.background)
+                                    .nestedScroll(homePullRefreshState.nestedScrollConnection)
                             ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.background)
+                                ) {
                                 if (uiState.currentUserId == null) {
                                     Box(
                                         modifier = Modifier
@@ -511,6 +538,11 @@ fun FeedScreen(
                                         }
                                     }
                                 }
+                                }
+                                PullToRefreshContainer(
+                                    state = homePullRefreshState,
+                                    modifier = Modifier.align(Alignment.TopCenter)
+                                )
                             }
                         }
                     }
@@ -559,12 +591,17 @@ fun FeedScreen(
                                 }
                             }
                         ) { feedPadding ->
-                            Column(
+                            Box(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .padding(feedPadding)
-                                    .background(MaterialTheme.colorScheme.background)
+                                    .nestedScroll(feedPullRefreshState.nestedScrollConnection)
                             ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.background)
+                                ) {
                                 TabRow(
                                     selectedTabIndex = if (uiState.selectedTab == FeedTab.TRENDING) 1 else 0,
                                     containerColor = MaterialTheme.colorScheme.background,
@@ -697,6 +734,11 @@ fun FeedScreen(
                                         }
                                     }
                                 }
+                                }
+                                PullToRefreshContainer(
+                                    state = feedPullRefreshState,
+                                    modifier = Modifier.align(Alignment.TopCenter)
+                                )
                             }
                         }
                     }

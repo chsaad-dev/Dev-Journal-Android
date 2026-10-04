@@ -3,6 +3,7 @@ package com.devjournal.di
 import android.content.Context
 import androidx.room.Room
 import com.devjournal.data.model.local.AppDatabase
+import com.devjournal.data.model.local.BookmarkedPostDao
 import com.devjournal.data.model.local.DraftDao
 import com.devjournal.data.remote.CloudinaryUploader
 import com.devjournal.data.remote.NotifyWorkerApi
@@ -100,13 +101,19 @@ abstract class AppModule {
                 context,
                 AppDatabase::class.java,
                 "devjournal_database"
-            ).build()
+            ).fallbackToDestructiveMigration().build()
         }
 
         @Provides
         @Singleton
         fun provideDraftDao(database: AppDatabase): DraftDao {
             return database.draftDao()
+        }
+
+        @Provides
+        @Singleton
+        fun provideBookmarkedPostDao(database: AppDatabase): BookmarkedPostDao {
+            return database.bookmarkedPostDao()
         }
     }
 }

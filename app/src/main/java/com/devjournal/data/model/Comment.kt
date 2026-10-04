@@ -7,5 +7,7 @@ data class Comment(
     @DocumentId var id: String = "",
     var userId: String = "",
     var text: String = "",
-    var createdAt: Timestamp? = null
+    var createdAt: Timestamp? = null,
+    var parentCommentId: String? = null,
+    var replyToUsername: String? = null
 )

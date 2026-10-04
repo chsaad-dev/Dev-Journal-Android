@@ -36,11 +36,17 @@ class CommentRepositoryImpl @Inject constructor(
         val postRef = firestore.collection("posts").document(postId)
         val commentRef = postRef.collection("comments").document()
 
-        val commentData = mapOf(
+        val commentData = mutableMapOf<String, Any?>(
             "userId" to comment.userId,
             "text" to comment.text,
             "createdAt" to FieldValue.serverTimestamp()
         )
+        if (!comment.parentCommentId.isNullOrBlank()) {
+            commentData["parentCommentId"] = comment.parentCommentId
+        }
+        if (!comment.replyToUsername.isNullOrBlank()) {
+            commentData["replyToUsername"] = comment.replyToUsername
+        }
 
         firestore.runTransaction { transaction ->
             transaction.set(commentRef, commentData)

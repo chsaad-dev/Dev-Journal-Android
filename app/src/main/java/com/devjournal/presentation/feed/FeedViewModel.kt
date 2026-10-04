@@ -40,6 +40,7 @@ data class FeedUiState(
     val followingPosts: List<Post> = emptyList(),
     val isLoading: Boolean = true,
     val isFollowingLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val selectedTag: String = "All",
     val availableTags: List<String> = listOf("All", "Android", "Compose", "Kotlin", "Architecture", "Firebase"),
     val isAdmin: Boolean = false,
@@ -198,6 +199,38 @@ class FeedViewModel @Inject constructor(
 
     fun loadMorePosts() {
         _postLimit.update { it + 10 }
+    }
+
+    fun refreshFeed() {
+        val uid = _uiState.value.currentUserId
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            try {
+                _postLimit.value = 10
+                if (uid != null) {
+                    observeFollowingPosts(uid, 10)
+                }
+                postsJob?.cancel()
+                postsJob = launch {
+                    getPostsUseCase(10).collect { postsList ->
+                        resolveMissingAuthors(postsList)
+                        _uiState.update { state ->
+                            val filteredAndSorted = filterAndSortPosts(postsList, state.selectedTag, state.selectedTab)
+                            state.copy(
+                                allPosts = postsList,
+                                posts = if (state.selectedTab != FeedTab.FOLLOWING) filteredAndSorted else state.posts,
+                                isLoading = false,
+                                isFollowingLoading = false,
+                                isRefreshing = false
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("DevJournal", "Failed to refresh feed", e)
+                _uiState.update { it.copy(isRefreshing = false) }
+            }
+        }
     }
 
     fun onTabSelected(tab: FeedTab) {

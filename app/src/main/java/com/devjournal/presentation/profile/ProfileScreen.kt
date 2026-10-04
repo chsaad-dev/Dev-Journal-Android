@@ -472,7 +472,7 @@ fun ProfileScreen(
                             val emptyMsg = when (selectedTabIndex) {
                                 0 -> "No published articles yet. Tap '+' to write your first journal!"
                                 1 -> "No liked articles yet."
-                                2 -> "No saved articles yet."
+                                2 -> "No saved articles yet. Articles you bookmark are cached for offline reading."
                                 else -> "No saved drafts yet."
                             }
                             Surface(
@@ -508,7 +508,7 @@ fun ProfileScreen(
                         items(postsToShow, key = { "post_${it.id}" }) { post ->
                             ProfilePostGridCard(
                                 post = post,
-                                badgeText = post.tags.firstOrNull(),
+                                badgeText = if (selectedTabIndex == 2) "Offline Ready" else post.tags.firstOrNull(),
                                 onClick = { onPostClick(post.id) }
                             )
                         }

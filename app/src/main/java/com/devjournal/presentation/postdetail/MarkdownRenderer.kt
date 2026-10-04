@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -429,7 +430,8 @@ fun CodeBlockView(
 @Composable
 fun RenderMarkdownBody(
     content: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onImageClick: ((url: String, alt: String) -> Unit)? = null
 ) {
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
@@ -604,6 +606,11 @@ fun RenderMarkdownBody(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
                                 .border(1.dp, BorderSubtleDark, RoundedCornerShape(12.dp))
+                                .then(
+                                    if (onImageClick != null) {
+                                        Modifier.clickable { onImageClick(block.url, block.alt) }
+                                    } else Modifier
+                                )
                         ) {
                             AsyncImage(
                                 model = block.url,

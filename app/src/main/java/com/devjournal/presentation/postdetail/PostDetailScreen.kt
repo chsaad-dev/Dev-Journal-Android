@@ -29,9 +29,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
@@ -82,6 +84,7 @@ import com.devjournal.data.model.Comment
 import com.devjournal.presentation.components.BottomImageScrim
 import com.devjournal.presentation.components.EdgeFadeHorizontalRow
 import com.devjournal.presentation.components.GlassIconButton
+import com.devjournal.presentation.components.ImageLightboxModal
 import com.devjournal.presentation.components.PostActionMenu
 import com.devjournal.presentation.components.StatChip
 import com.devjournal.presentation.components.TopImageScrim
@@ -122,6 +125,8 @@ fun PostDetailScreen(
 
     var showDeletePostDialog by remember { mutableStateOf(false) }
     var commentIdToDelete by remember { mutableStateOf<String?>(null) }
+    var lightboxImageUrl by remember { mutableStateOf<String?>(null) }
+    var lightboxAltText by remember { mutableStateOf("") }
 
     if (showDeletePostDialog) {
         AlertDialog(
@@ -279,12 +284,51 @@ fun PostDetailScreen(
                 tonalElevation = 8.dp,
                 border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Replying to banner
+                    AnimatedVisibility(visible = uiState.replyingToComment != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Reply,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Replying to ${uiState.replyingToAuthorName ?: "developer"}",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            IconButton(
+                                onClick = { viewModel.onCancelReply() },
+                                modifier = Modifier.size(22.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Cancel reply",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                     OutlinedTextField(
                         value = uiState.commentInput,
                         onValueChange = { viewModel.onCommentInputChange(it) },
@@ -344,6 +388,7 @@ fun PostDetailScreen(
                 }
             }
         }
+    }
     ) { paddingValues ->
         if (uiState.isLoading) {
             Box(
@@ -374,12 +419,16 @@ fun PostDetailScreen(
                     .verticalScroll(scrollState)
                     .padding(bottom = paddingValues.calculateBottomPadding())
             ) {
-                // Cover Image with Top & Bottom Scrims
+                // Cover Image with Top & Bottom Scrims (Clickable for Pinch-to-Zoom Lightbox)
                 if (post.coverImageUrl.isNotBlank()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(260.dp)
+                            .clickable {
+                                lightboxImageUrl = post.coverImageUrl
+                                lightboxAltText = post.title
+                            }
                     ) {
                         AsyncImage(
                             model = post.coverImageUrl,
@@ -526,8 +575,14 @@ fun PostDetailScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Complete Styled Markdown Content
-                    RenderMarkdownBody(content = post.content)
+                    // Complete Styled Markdown Content (with image pinch-to-zoom support)
+                    RenderMarkdownBody(
+                        content = post.content,
+                        onImageClick = { url, alt ->
+                            lightboxImageUrl = url
+                            lightboxAltText = alt
+                        }
+                    )
 
                     Spacer(modifier = Modifier.height(28.dp))
 
@@ -617,18 +672,32 @@ fun PostDetailScreen(
                             )
                         }
                     } else {
+                        val rootComments = remember(uiState.comments) {
+                            uiState.comments.filter { it.parentCommentId.isNullOrBlank() }
+                        }
+                        val repliesByParent = remember(uiState.comments) {
+                            uiState.comments.filter { !it.parentCommentId.isNullOrBlank() }.groupBy { it.parentCommentId }
+                        }
+
                         Column(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            uiState.comments.forEach { comment ->
-                                CommentItem(
-                                    comment = comment,
+                            rootComments.forEach { rootComment ->
+                                val replies = repliesByParent[rootComment.id] ?: emptyList()
+
+                                CommentThreadItem(
+                                    rootComment = rootComment,
+                                    replies = replies,
                                     currentUserId = uiState.currentUserId,
                                     isAdmin = uiState.isAdmin,
-                                    commenterName = uiState.commenterNames[comment.userId],
-                                    commenterPhotoUrl = uiState.commenterPhotoUrls[comment.userId],
-                                    onDelete = { commentIdToDelete = comment.id }
+                                    commenterNames = uiState.commenterNames,
+                                    commenterUsernames = uiState.commenterUsernames,
+                                    commenterPhotoUrls = uiState.commenterPhotoUrls,
+                                    onReply = { targetComment, name ->
+                                        viewModel.onReplyToComment(targetComment, name)
+                                    },
+                                    onDelete = { commentId -> commentIdToDelete = commentId }
                                 )
                             }
                         }
@@ -651,11 +720,90 @@ fun PostDetailScreen(
             }
         )
     }
+
+    // Fullscreen Pinch-to-Zoom Lightbox Modal
+    lightboxImageUrl?.let { url ->
+        ImageLightboxModal(
+            imageUrl = url,
+            titleOrAlt = lightboxAltText,
+            onDismiss = { lightboxImageUrl = null }
+        )
+    }
 }
 
 /**
- * Modern comment card with strict ownership check for delete action,
- * user avatar ring, and clean typography.
+ * Threaded discussion item: root comment + connected replies
+ */
+@Composable
+fun CommentThreadItem(
+    rootComment: Comment,
+    replies: List<Comment>,
+    currentUserId: String?,
+    isAdmin: Boolean,
+    commenterNames: Map<String, String>,
+    commenterUsernames: Map<String, String>,
+    commenterPhotoUrls: Map<String, String>,
+    onReply: (Comment, String) -> Unit,
+    onDelete: (String) -> Unit
+) {
+    val rootAuthorName = commenterNames[rootComment.userId] ?: ""
+    val rootUsername = commenterUsernames[rootComment.userId] ?: rootAuthorName
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Parent Comment
+        CommentItem(
+            comment = rootComment,
+            currentUserId = currentUserId,
+            isAdmin = isAdmin,
+            commenterName = rootAuthorName,
+            commenterPhotoUrl = commenterPhotoUrls[rootComment.userId],
+            isReply = false,
+            onReply = { onReply(rootComment, rootUsername) },
+            onDelete = { onDelete(rootComment.id) }
+        )
+
+        // Nested Replies
+        if (replies.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                replies.forEach { reply ->
+                    val replyAuthorName = commenterNames[reply.userId] ?: ""
+                    val replyUsername = commenterUsernames[reply.userId] ?: replyAuthorName
+
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        // Thread vertical accent line
+                        Box(
+                            modifier = Modifier
+                                .width(2.dp)
+                                .height(48.dp)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(1.dp))
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Box(modifier = Modifier.weight(1f)) {
+                            CommentItem(
+                                comment = reply,
+                                currentUserId = currentUserId,
+                                isAdmin = isAdmin,
+                                commenterName = replyAuthorName,
+                                commenterPhotoUrl = commenterPhotoUrls[reply.userId],
+                                isReply = true,
+                                onReply = { onReply(reply, replyUsername) },
+                                onDelete = { onDelete(reply.id) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Modern comment card with reply button, avatar, timestamp, and delete action.
  */
 @Composable
 fun CommentItem(
@@ -664,6 +812,8 @@ fun CommentItem(
     isAdmin: Boolean,
     commenterName: String?,
     commenterPhotoUrl: String?,
+    isReply: Boolean = false,
+    onReply: (() -> Unit)? = null,
     onDelete: () -> Unit
 ) {
     val isOwner = !currentUserId.isNullOrBlank() && currentUserId == comment.userId
@@ -671,19 +821,22 @@ fun CommentItem(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isReply)
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        else
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(12.dp)
         ) {
             // Commenter Avatar
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(if (isReply) 30.dp else 36.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer)
                     .border(1.dp, BorderSubtleDark, CircleShape),
@@ -701,12 +854,12 @@ fun CommentItem(
                         imageVector = Icons.Default.AccountCircle,
                         contentDescription = "Commenter Avatar",
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(34.dp)
+                        modifier = Modifier.size(if (isReply) 28.dp else 34.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(
@@ -724,7 +877,10 @@ fun CommentItem(
 
                     Text(
                         text = displayName,
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        style = if (isReply)
+                            MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                        else
+                            MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
@@ -741,17 +897,27 @@ fun CommentItem(
                                 onClick = onDelete,
                                 modifier = Modifier
                                     .padding(start = 6.dp)
-                                    .size(24.dp)
+                                    .size(22.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.DeleteOutline,
                                     contentDescription = "Delete Comment",
                                     tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(15.dp)
                                 )
                             }
                         }
                     }
+                }
+
+                // If this is a reply to someone, display replying tag
+                if (!comment.replyToUsername.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Replying to @${comment.replyToUsername}",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -761,6 +927,31 @@ fun CommentItem(
                     style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
                     color = MaterialTheme.colorScheme.onSurface
                 )
+
+                // Reply action button
+                if (onReply != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .clickable { onReply() }
+                            .padding(vertical = 2.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Reply,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Reply",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
         }
     }

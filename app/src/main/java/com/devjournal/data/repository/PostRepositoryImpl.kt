@@ -2,6 +2,9 @@ package com.devjournal.data.repository
 
 import com.devjournal.data.model.Post
 import com.devjournal.data.model.PostViewer
+import com.devjournal.data.model.local.BookmarkedPostDao
+import com.devjournal.data.model.local.toBookmarkedPostEntity
+import com.devjournal.data.model.local.toPost
 import com.devjournal.domain.repository.PostRepository
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -9,11 +12,13 @@ import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 class PostRepositoryImpl @Inject constructor(
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val bookmarkedPostDao: BookmarkedPostDao
 ) : PostRepository {
 
     override fun getPublishedPosts(limit: Int): Flow<List<Post>> = callbackFlow {
@@ -51,18 +56,38 @@ class PostRepositoryImpl @Inject constructor(
     }
 
     override fun getPostById(postId: String): Flow<Post?> = callbackFlow {
+        // Emit cached post immediately if available for offline reading
+        val offlineJob = launch {
+            val cached = bookmarkedPostDao.getPostById(postId)?.toPost()
+            if (cached != null) {
+                trySend(cached)
+            }
+        }
+
         val listener = firestore.collection("posts")
             .document(postId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    trySend(null)
-                    close()
+                    launch {
+                        val cached = bookmarkedPostDao.getPostById(postId)?.toPost()
+                        trySend(cached)
+                    }
                     return@addSnapshotListener
                 }
                 val post = snapshot?.toObject(Post::class.java)
-                trySend(post)
+                if (post != null) {
+                    trySend(post)
+                } else {
+                    launch {
+                        val cached = bookmarkedPostDao.getPostById(postId)?.toPost()
+                        trySend(cached)
+                    }
+                }
             }
-        awaitClose { listener.remove() }
+        awaitClose { 
+            listener.remove()
+            offlineJob.cancel()
+        }
     }
 
     override fun isPostLiked(postId: String, uid: String): Flow<Boolean> = callbackFlow {
@@ -144,18 +169,26 @@ class PostRepositoryImpl @Inject constructor(
     }
 
     override fun getBookmarkedPosts(uid: String): Flow<List<Post>> = callbackFlow {
+        // Emit offline cached bookmarks first so users can read instantly offline
+        val offlineJob = launch {
+            bookmarkedPostDao.getAllBookmarkedPosts().collect { entities ->
+                if (entities.isNotEmpty()) {
+                    trySend(entities.map { it.toPost() })
+                }
+            }
+        }
+
         val listener = firestore.collection("users")
             .document(uid)
             .collection("bookmarks")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    trySend(emptyList())
-                    close()
                     return@addSnapshotListener
                 }
                 val postIds = snapshot?.documents?.map { it.id } ?: emptyList()
                 if (postIds.isEmpty()) {
                     trySend(emptyList())
+                    launch { bookmarkedPostDao.clearAll() }
                     return@addSnapshotListener
                 }
                 firestore.collection("posts")
@@ -164,13 +197,18 @@ class PostRepositoryImpl @Inject constructor(
                     .addOnSuccessListener { postsSnapshot ->
                         val posts = postsSnapshot.toObjects(Post::class.java)
                         trySend(posts)
-                    }
-                    .addOnFailureListener {
-                        trySend(emptyList())
-                        close()
+                        // Sync to local Room database for offline reading
+                        launch {
+                            posts.forEach { post ->
+                                bookmarkedPostDao.insert(post.toBookmarkedPostEntity())
+                            }
+                        }
                     }
             }
-        awaitClose { listener.remove() }
+        awaitClose { 
+            listener.remove()
+            offlineJob.cancel()
+        }
     }
 
     override fun observeBookmarkedPostIds(uid: String): Flow<Set<String>> = callbackFlow {
@@ -221,12 +259,26 @@ class PostRepositoryImpl @Inject constructor(
         val bookmarkRef = firestore.collection("users").document(uid)
             .collection("bookmarks").document(postId)
         bookmarkRef.set(mapOf("bookmarkedAt" to FieldValue.serverTimestamp())).await()
+        try {
+            val postDoc = firestore.collection("posts").document(postId).get().await()
+            val post = postDoc.toObject(Post::class.java)
+            if (post != null) {
+                bookmarkedPostDao.insert(post.toBookmarkedPostEntity())
+            }
+        } catch (_: Exception) {
+            // Best-effort offline caching
+        }
     }
 
     override suspend fun unbookmarkPost(postId: String, uid: String) {
         val bookmarkRef = firestore.collection("users").document(uid)
             .collection("bookmarks").document(postId)
         bookmarkRef.delete().await()
+        try {
+            bookmarkedPostDao.deleteById(postId)
+        } catch (_: Exception) {
+            // Best-effort
+        }
     }
 
     override suspend fun createPost(post: Post): Result<String> = try {
