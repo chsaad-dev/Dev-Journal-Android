@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
@@ -89,6 +90,7 @@ fun SettingsScreen(
     onPrivacyClick: () -> Unit = {},
     onLinkedAccountsClick: () -> Unit = {},
     onReportBugClick: () -> Unit = {},
+    onMyReportsClick: () -> Unit = {},
     onHelpCenterClick: () -> Unit = {},
     onAppGuideClick: () -> Unit = {},
     onSignedOut: () -> Unit
@@ -372,6 +374,14 @@ fun SettingsScreen(
                         subtitle = "Found an issue? Send us a bug report with logs",
                         isNavigable = true,
                         onClick = onReportBugClick
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+                    SettingsCardItem(
+                        icon = Icons.AutoMirrored.Outlined.Assignment,
+                        title = "My Reports",
+                        subtitle = "Track status and engineering responses to your reports",
+                        isNavigable = true,
+                        onClick = onMyReportsClick
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
                     SettingsCardItem(

@@ -32,6 +32,7 @@ import com.devjournal.presentation.settings.PrivacySettingsScreen
 import com.devjournal.presentation.settings.LinkedAccountsScreen
 import com.devjournal.presentation.support.ReportBugScreen
 import com.devjournal.presentation.support.HelpCenterScreen
+import com.devjournal.presentation.support.MyReportsScreen
 import com.devjournal.presentation.guide.AppGuideScreen
 import com.devjournal.presentation.search.SearchScreen
 import com.devjournal.presentation.splash.SplashScreen
@@ -221,6 +222,9 @@ class MainActivity : ComponentActivity() {
                             onReportBugClick = {
                                 navController.navigate("report-bug")
                             },
+                            onMyReportsClick = {
+                                navController.navigate("my-reports")
+                            },
                             onHelpCenterClick = {
                                 navController.navigate("help-center")
                             },
@@ -236,7 +240,14 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("report-bug") {
                         ReportBugScreen(
-                            onBackClick = { navController.popBackStack() }
+                            onBackClick = { navController.popBackStack() },
+                            onViewReportsClick = { navController.navigate("my-reports") }
+                        )
+                    }
+                    composable("my-reports") {
+                        MyReportsScreen(
+                            onBackClick = { navController.popBackStack() },
+                            onNewReportClick = { navController.navigate("report-bug") }
                         )
                     }
                     composable("help-center") {
