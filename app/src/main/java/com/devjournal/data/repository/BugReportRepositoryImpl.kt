@@ -2,6 +2,7 @@ package com.devjournal.data.repository
 
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import com.devjournal.BuildConfig
 import com.devjournal.data.model.BugReport
 import com.devjournal.data.remote.CloudinaryUploader
@@ -81,14 +82,21 @@ class BugReportRepositoryImpl @Inject constructor(
     override fun getUserBugReports(userId: String): Flow<List<BugReport>> = callbackFlow {
         val listener = firestore.collection("bugReports")
             .whereEqualTo("userId", userId)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
+                    Log.e("BugReportRepo", "Error listening to user bug reports", error)
                     trySend(emptyList())
-                    close()
                     return@addSnapshotListener
                 }
-                val reports = snapshot?.toObjects(BugReport::class.java) ?: emptyList()
+                val reports = snapshot?.documents?.mapNotNull { doc ->
+                    try {
+                        val report = doc.toObject(BugReport::class.java)
+                        report?.copy(id = report.id.ifBlank { doc.id })
+                    } catch (e: Exception) {
+                        Log.e("BugReportRepo", "Error deserializing bug report ${doc.id}", e)
+                        null
+                    }
+                }?.sortedByDescending { it.createdAt?.seconds ?: Long.MAX_VALUE } ?: emptyList()
                 trySend(reports)
             }
         awaitClose { listener.remove() }

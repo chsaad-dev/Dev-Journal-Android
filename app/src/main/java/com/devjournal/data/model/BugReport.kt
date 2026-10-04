@@ -1,11 +1,10 @@
 package com.devjournal.data.model
 
 import com.google.firebase.Timestamp
-import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 
 data class BugReport(
-    @DocumentId var id: String = "",
+    var id: String = "",
     var userId: String = "",
     var userEmail: String = "",
     var title: String = "",
