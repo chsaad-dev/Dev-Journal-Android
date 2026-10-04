@@ -56,7 +56,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.devjournal.data.model.UserProfile
-import com.devjournal.ui.theme.BorderSubtleDark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -158,7 +157,7 @@ private fun FollowUserCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .border(1.dp, BorderSubtleDark, RoundedCornerShape(14.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
             .clickable(onClick = onUserClick),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
@@ -188,7 +187,7 @@ private fun FollowUserCard(
                         .size(48.dp)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                        .border(1.5.dp, BorderSubtleDark, CircleShape),
+                        .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -233,7 +232,7 @@ private fun FollowUserCard(
                     OutlinedButton(
                         onClick = onFollowClick,
                         shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, BorderSubtleDark),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -298,7 +297,7 @@ private fun EmptyFollowListState(
             modifier = Modifier
                 .size(96.dp)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-                .border(1.dp, BorderSubtleDark, CircleShape),
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Box(
@@ -323,7 +322,7 @@ private fun EmptyFollowListState(
         Surface(
             shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            border = BorderStroke(1.dp, BorderSubtleDark)
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         ) {
             Text(
                 text = "NETWORK",

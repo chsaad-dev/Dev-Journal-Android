@@ -47,7 +47,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.devjournal.ui.theme.BorderSubtleDark
 import com.devjournal.ui.theme.SuccessGreen
 import com.devjournal.ui.theme.SuccessGreenContainer
 import com.google.firebase.auth.FirebaseAuth
@@ -148,7 +147,7 @@ fun LinkedAccountsScreen(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, BorderSubtleDark, RoundedCornerShape(14.dp)),
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp)),
                     shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                 ) {
@@ -187,7 +186,7 @@ private fun LinkedProviderCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, BorderSubtleDark, RoundedCornerShape(16.dp)),
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -208,7 +207,7 @@ private fun LinkedProviderCard(
                     modifier = Modifier
                         .size(40.dp)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-                        .border(1.dp, BorderSubtleDark, CircleShape),
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(

@@ -52,7 +52,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextDecoration
 import coil.compose.AsyncImage
-import com.devjournal.ui.theme.BorderSubtleDark
 import com.devjournal.ui.theme.JetBrainsMonoFontFamily
 import kotlinx.coroutines.delay
 
@@ -349,7 +348,7 @@ fun CodeBlockView(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .border(1.dp, BorderSubtleDark, RoundedCornerShape(14.dp)),
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp)),
         shape = RoundedCornerShape(14.dp),
         color = Color(0xFF0D1117) // GitHub dark IDE tone
     ) {
@@ -579,7 +578,7 @@ fun RenderMarkdownBody(
 
                 is MarkdownBlock.Divider -> {
                     HorizontalDivider(
-                        color = BorderSubtleDark,
+                        color = MaterialTheme.colorScheme.outlineVariant,
                         thickness = 1.dp,
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
@@ -605,7 +604,7 @@ fun RenderMarkdownBody(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .border(1.dp, BorderSubtleDark, RoundedCornerShape(12.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
                                 .then(
                                     if (onImageClick != null) {
                                         Modifier.clickable { onImageClick(block.url, block.alt) }

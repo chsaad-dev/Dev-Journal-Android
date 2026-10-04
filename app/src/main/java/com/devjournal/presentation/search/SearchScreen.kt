@@ -81,7 +81,6 @@ import androidx.compose.material3.Tab
 import com.devjournal.data.model.UserProfile
 import com.devjournal.data.model.Post
 import com.devjournal.presentation.components.EdgeFadeHorizontalRow
-import com.devjournal.ui.theme.BorderSubtleDark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -144,7 +143,7 @@ fun SearchScreen(
                         shape = RoundedCornerShape(24.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                            unfocusedBorderColor = BorderSubtleDark,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                             cursorColor = MaterialTheme.colorScheme.primary
@@ -183,7 +182,7 @@ fun SearchScreen(
                 selectedTabIndex = if (uiState.selectedTab == SearchTab.ARTICLES) 0 else 1,
                 containerColor = MaterialTheme.colorScheme.background,
                 contentColor = MaterialTheme.colorScheme.primary,
-                divider = { HorizontalDivider(color = BorderSubtleDark) }
+                divider = { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant) }
             ) {
                 Tab(
                     selected = uiState.selectedTab == SearchTab.ARTICLES,
@@ -290,7 +289,7 @@ fun SearchScreen(
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = isSelected,
-                                    borderColor = if (isSelected) MaterialTheme.colorScheme.primary else BorderSubtleDark
+                                    borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
                                 )
                             )
                         }
@@ -334,7 +333,7 @@ fun SearchScreen(
                                 modifier = Modifier
                                     .size(72.dp)
                                     .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-                                    .border(1.dp, BorderSubtleDark, CircleShape),
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -366,7 +365,7 @@ fun SearchScreen(
                             OutlinedButton(
                                 onClick = { viewModel.onSearchQueryChanged("") },
                                 shape = RoundedCornerShape(20.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     contentColor = MaterialTheme.colorScheme.primary
                                 )
@@ -396,7 +395,7 @@ fun SearchScreen(
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
                                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                             ) {
                                 Text(
                                     text = "${uiState.allPosts.size} posts",
@@ -437,7 +436,7 @@ fun SearchScreen(
                                     modifier = Modifier
                                         .size(64.dp)
                                         .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-                                        .border(1.dp, BorderSubtleDark, CircleShape),
+                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -548,7 +547,7 @@ fun SearchScreen(
                                 modifier = Modifier
                                     .size(72.dp)
                                     .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-                                    .border(1.dp, BorderSubtleDark, CircleShape),
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -580,7 +579,7 @@ fun SearchScreen(
                             OutlinedButton(
                                 onClick = { viewModel.onSearchQueryChanged("") },
                                 shape = RoundedCornerShape(20.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     contentColor = MaterialTheme.colorScheme.primary
                                 )
@@ -611,7 +610,7 @@ fun SearchScreen(
                             color = if (uiState.searchQuery.isBlank()) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                if (uiState.searchQuery.isBlank()) BorderSubtleDark else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                if (uiState.searchQuery.isBlank()) MaterialTheme.colorScheme.outlineVariant else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                             )
                         ) {
                             Text(
@@ -655,7 +654,7 @@ fun SearchResultCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, BorderSubtleDark, RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
@@ -809,7 +808,7 @@ fun UserAccountCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .border(1.dp, BorderSubtleDark, RoundedCornerShape(14.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
             .clickable { onClick() },
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
@@ -935,7 +934,7 @@ fun UserAccountCard(
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

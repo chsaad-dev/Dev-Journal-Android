@@ -73,7 +73,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.devjournal.ui.theme.BorderSubtleDark
+import com.devjournal.domain.model.ThemeMode
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 
@@ -94,7 +94,12 @@ fun SettingsScreen(
 
     var showThemeDialog by remember { mutableStateOf(false) }
     var showSignOutDialog by remember { mutableStateOf(false) }
-    var selectedThemeTitle by remember { mutableStateOf("Obsidian Dark") }
+
+    val currentThemeTitle = when (uiState.themeMode) {
+        ThemeMode.SYSTEM -> "System Default"
+        ThemeMode.LIGHT -> "Clean Light"
+        ThemeMode.DARK -> "Obsidian Dark"
+    }
 
     LaunchedEffect(uiState.isSignedOut) {
         if (uiState.isSignedOut) {
@@ -110,9 +115,10 @@ fun SettingsScreen(
 
     if (showThemeDialog) {
         ThemeSelectionDialog(
+            currentTheme = uiState.themeMode,
             onDismissRequest = { showThemeDialog = false },
             onThemeSelected = { mode ->
-                selectedThemeTitle = mode.title.takeWhile { it != '(' }.trim()
+                viewModel.setThemeMode(mode)
                 showThemeDialog = false
             }
         )
@@ -123,7 +129,7 @@ fun SettingsScreen(
             onDismissRequest = { showSignOutDialog = false },
             shape = RoundedCornerShape(20.dp),
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.border(1.dp, BorderSubtleDark, RoundedCornerShape(20.dp)),
+            modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(20.dp)),
             icon = {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
@@ -207,7 +213,7 @@ fun SettingsScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, BorderSubtleDark, RoundedCornerShape(16.dp)),
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -224,7 +230,7 @@ fun SettingsScreen(
                                     .size(48.dp)
                                     .clip(CircleShape)
                                     .background(MaterialTheme.colorScheme.primaryContainer)
-                                    .border(1.dp, BorderSubtleDark, CircleShape),
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -262,7 +268,7 @@ fun SettingsScreen(
                         isNavigable = true,
                         onClick = onEditProfileClick
                     )
-                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
                     SettingsCardItem(
                         icon = Icons.Outlined.Link,
                         title = "Linked Accounts",
@@ -281,11 +287,11 @@ fun SettingsScreen(
                         icon = Icons.Outlined.Palette,
                         title = "Theme",
                         subtitle = "OLED Obsidian, System Default, or Light",
-                        trailingText = selectedThemeTitle,
+                        trailingText = currentThemeTitle,
                         isNavigable = true,
                         onClick = { showThemeDialog = true }
                     )
-                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
                     SettingsCardItem(
                         icon = Icons.Outlined.FormatSize,
                         title = "Reading Font Size",
@@ -306,21 +312,21 @@ fun SettingsScreen(
                         subtitle = "Receive timely alerts on your device",
                         initialValue = true
                     )
-                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
                     SettingsSwitchCardItem(
                         icon = Icons.Outlined.ChatBubbleOutline,
                         title = "New Comments",
                         subtitle = "When someone replies to your articles",
                         initialValue = true
                     )
-                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
                     SettingsSwitchCardItem(
                         icon = Icons.Outlined.FavoriteBorder,
                         title = "New Likes",
                         subtitle = "When your articles receive claps and hearts",
                         initialValue = true
                     )
-                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
                     SettingsSwitchCardItem(
                         icon = Icons.Outlined.PersonAdd,
                         title = "New Followers",
@@ -376,7 +382,7 @@ fun SettingsSection(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, BorderSubtleDark, RoundedCornerShape(16.dp)),
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant

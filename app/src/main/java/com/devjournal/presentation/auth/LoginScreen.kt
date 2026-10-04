@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import com.devjournal.ui.theme.BorderSubtleDark
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -246,16 +245,16 @@ fun LoginScreen(
 
                 Text(
                     text = buildAnnotatedString {
-                        withStyle(SpanStyle(color = Color(0xFF4CD7F6), fontWeight = FontWeight.Bold)) {
+                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold)) {
                             append("<")
                         }
-                        withStyle(SpanStyle(color = Color.White, fontWeight = FontWeight.ExtraBold)) {
+                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.ExtraBold)) {
                             append("Dev")
                         }
-                        withStyle(SpanStyle(color = Color(0xFFC3C0FF), fontWeight = FontWeight.ExtraBold)) {
+                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold)) {
                             append("Journal")
                         }
-                        withStyle(SpanStyle(color = Color(0xFF4CD7F6), fontWeight = FontWeight.Bold)) {
+                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold)) {
                             append(" />")
                         }
                     },
@@ -272,7 +271,7 @@ fun LoginScreen(
                     else
                         "Welcome back, engineer",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF94A3B8)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -283,7 +282,7 @@ fun LoginScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp)),
                     color = MaterialTheme.colorScheme.surfaceContainer,
-                    border = BorderStroke(1.dp, BorderSubtleDark)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
                     Row(
                         modifier = Modifier
@@ -296,7 +295,7 @@ fun LoginScreen(
                             label = "signInTabBg"
                         )
                         val signInTextColor by animateColorAsState(
-                            targetValue = if (!uiState.isSignUpMode) MaterialTheme.colorScheme.onPrimaryContainer else Color(0xFF94A3B8),
+                            targetValue = if (!uiState.isSignUpMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                             animationSpec = tween(250),
                             label = "signInTabText"
                         )
@@ -307,7 +306,7 @@ fun LoginScreen(
                             label = "signUpTabBg"
                         )
                         val signUpTextColor by animateColorAsState(
-                            targetValue = if (uiState.isSignUpMode) MaterialTheme.colorScheme.onPrimaryContainer else Color(0xFF94A3B8),
+                            targetValue = if (uiState.isSignUpMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                             animationSpec = tween(250),
                             label = "signUpTabText"
                         )
@@ -374,7 +373,7 @@ fun LoginScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = BorderSubtleDark,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
                     )
@@ -422,7 +421,7 @@ fun LoginScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = BorderSubtleDark,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
                     )
@@ -716,7 +715,7 @@ fun LoginScreen(
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, BorderSubtleDark),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     colors = ButtonDefaults.outlinedButtonColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer
                     ),
@@ -731,13 +730,13 @@ fun LoginScreen(
                             fontFamily = FontFamily.SansSerif,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
-                            color = Color(0xFF4CD7F6)
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = "Continue with Google",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
-                            color = Color(0xFFF1F5F9)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }

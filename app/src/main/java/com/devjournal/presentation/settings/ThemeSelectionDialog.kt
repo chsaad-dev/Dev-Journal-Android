@@ -43,19 +43,41 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.devjournal.ui.theme.BorderSubtleDark
+import com.devjournal.domain.model.ThemeMode
 
-enum class AppThemeMode(val title: String, val subtitle: String, val icon: ImageVector) {
-    DARK("Obsidian Dark (Recommended)", "Pure dark aesthetic with OLED contrast", Icons.Outlined.DarkMode),
-    SYSTEM("System Default", "Adapts automatically to Android system settings", Icons.Outlined.BrightnessAuto),
-    LIGHT("Clean Light", "Light editorial layout for daytime reading", Icons.Outlined.LightMode)
-}
+data class ThemeOptionItem(
+    val mode: ThemeMode,
+    val title: String,
+    val subtitle: String,
+    val icon: ImageVector
+)
+
+val themeOptionItems = listOf(
+    ThemeOptionItem(
+        mode = ThemeMode.SYSTEM,
+        title = "System Default",
+        subtitle = "Adapts automatically to Android system settings",
+        icon = Icons.Outlined.BrightnessAuto
+    ),
+    ThemeOptionItem(
+        mode = ThemeMode.LIGHT,
+        title = "Clean Light",
+        subtitle = "Light editorial layout for daytime reading",
+        icon = Icons.Outlined.LightMode
+    ),
+    ThemeOptionItem(
+        mode = ThemeMode.DARK,
+        title = "Obsidian Dark",
+        subtitle = "Pure dark aesthetic with OLED contrast",
+        icon = Icons.Outlined.DarkMode
+    )
+)
 
 @Composable
 fun ThemeSelectionDialog(
-    currentTheme: AppThemeMode = AppThemeMode.DARK,
+    currentTheme: ThemeMode = ThemeMode.SYSTEM,
     onDismissRequest: () -> Unit,
-    onThemeSelected: (AppThemeMode) -> Unit
+    onThemeSelected: (ThemeMode) -> Unit
 ) {
     val context = LocalContext.current
     var selectedMode by remember { mutableStateOf(currentTheme) }
@@ -64,7 +86,7 @@ fun ThemeSelectionDialog(
         onDismissRequest = onDismissRequest,
         shape = RoundedCornerShape(20.dp),
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = Modifier.border(1.dp, BorderSubtleDark, RoundedCornerShape(20.dp)),
+        modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(20.dp)),
         title = {
             Text(
                 text = "Choose Theme",
@@ -77,18 +99,18 @@ fun ThemeSelectionDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                AppThemeMode.values().forEach { mode ->
-                    val isSelected = selectedMode == mode
+                themeOptionItems.forEach { item ->
+                    val isSelected = selectedMode == item.mode
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
                             .border(
                                 width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else BorderSubtleDark,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                                 shape = RoundedCornerShape(12.dp)
                             )
-                            .clickable { selectedMode = mode },
+                            .clickable { selectedMode = item.mode },
                         shape = RoundedCornerShape(12.dp),
                         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                     ) {
@@ -104,7 +126,7 @@ fun ThemeSelectionDialog(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(
-                                    imageVector = mode.icon,
+                                    imageVector = item.icon,
                                     contentDescription = null,
                                     tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(22.dp)
@@ -112,12 +134,12 @@ fun ThemeSelectionDialog(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        text = mode.title,
+                                        text = item.title,
                                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                                         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = mode.subtitle,
+                                        text = item.subtitle,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -156,7 +178,8 @@ fun ThemeSelectionDialog(
             Button(
                 onClick = {
                     onThemeSelected(selectedMode)
-                    Toast.makeText(context, "Theme set to ${selectedMode.title}", Toast.LENGTH_SHORT).show()
+                    val title = themeOptionItems.firstOrNull { it.mode == selectedMode }?.title ?: "Selected"
+                    Toast.makeText(context, "Theme set to $title", Toast.LENGTH_SHORT).show()
                     onDismissRequest()
                 },
                 shape = RoundedCornerShape(20.dp)
@@ -171,3 +194,4 @@ fun ThemeSelectionDialog(
         }
     )
 }
+

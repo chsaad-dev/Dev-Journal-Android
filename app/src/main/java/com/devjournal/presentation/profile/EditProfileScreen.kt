@@ -64,7 +64,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.devjournal.ui.theme.BorderSubtleDark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -254,7 +253,7 @@ fun EditProfileScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, BorderSubtleDark, RoundedCornerShape(16.dp)),
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -290,7 +289,7 @@ fun EditProfileScreen(
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = BorderSubtleDark,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                                 focusedContainerColor = MaterialTheme.colorScheme.background,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.6f)
                             )
@@ -404,7 +403,7 @@ fun EditProfileScreen(
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = if (uiState.usernameAvailability == UsernameAvailability.AVAILABLE) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = if (uiState.usernameAvailability == UsernameAvailability.AVAILABLE) Color(0xFF4CAF50).copy(alpha = 0.5f) else BorderSubtleDark,
+                                unfocusedBorderColor = if (uiState.usernameAvailability == UsernameAvailability.AVAILABLE) Color(0xFF4CAF50).copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant,
                                 focusedContainerColor = MaterialTheme.colorScheme.background,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.6f)
                             )
@@ -449,7 +448,7 @@ fun EditProfileScreen(
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = BorderSubtleDark,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                                 focusedContainerColor = MaterialTheme.colorScheme.background,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.6f)
                             )

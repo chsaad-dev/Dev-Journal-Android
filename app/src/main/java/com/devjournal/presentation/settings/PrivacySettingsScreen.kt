@@ -52,7 +52,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.devjournal.ui.theme.BorderSubtleDark
 
 enum class CommentPermission(val title: String, val subtitle: String) {
     EVERYONE("Everyone", "Any developer on DevJournal can comment on your posts"),
@@ -114,7 +113,7 @@ fun PrivacySettingsScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, BorderSubtleDark, RoundedCornerShape(16.dp)),
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -174,7 +173,7 @@ fun PrivacySettingsScreen(
                                 }
 
                                 if (index < CommentPermission.values().size - 1) {
-                                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
                                 }
                             }
                         }
@@ -195,7 +194,7 @@ fun PrivacySettingsScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, BorderSubtleDark, RoundedCornerShape(16.dp)),
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -211,7 +210,7 @@ fun PrivacySettingsScreen(
                                 onCheckedChange = { isPrivateAccount = it }
                             )
 
-                            HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
 
                             // Search discovery toggle
                             SettingsToggleRow(
@@ -239,7 +238,7 @@ fun PrivacySettingsScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, BorderSubtleDark, RoundedCornerShape(16.dp)),
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant

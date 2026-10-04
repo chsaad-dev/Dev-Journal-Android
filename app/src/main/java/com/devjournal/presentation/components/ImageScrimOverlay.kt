@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -23,7 +24,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.devjournal.ui.theme.BorderSubtleDark
 
 /**
  * Top gradient scrim for hero images to guarantee that back button,
@@ -123,7 +123,7 @@ fun GlassIconButton(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .border(1.dp, BorderSubtleDark, CircleShape)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = rememberRipple(bounded = true, color = tint),

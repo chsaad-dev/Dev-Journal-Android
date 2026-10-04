@@ -94,7 +94,6 @@ import com.devjournal.presentation.components.TopImageScrim
 import com.devjournal.presentation.util.sharePost
 import com.devjournal.ui.theme.BookmarkPurple
 import com.devjournal.ui.theme.BookmarkPurpleContainer
-import com.devjournal.ui.theme.BorderSubtleDark
 import com.devjournal.ui.theme.LikeRed
 import com.devjournal.ui.theme.LikeRedContainer
 import com.devjournal.ui.theme.ViewCyan
@@ -296,7 +295,7 @@ fun PostDetailScreen(
                     .navigationBarsPadding(),
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 8.dp,
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     // Replying to banner
@@ -384,7 +383,7 @@ fun PostDetailScreen(
                         keyboardActions = KeyboardActions(onSend = { viewModel.onSubmitComment() }),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = BorderSubtleDark,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                         )
@@ -496,7 +495,7 @@ fun PostDetailScreen(
                                 .padding(bottom = 14.dp),
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -552,7 +551,7 @@ fun PostDetailScreen(
                                 modifier = Modifier
                                     .size(42.dp)
                                     .clip(CircleShape)
-                                    .border(1.5.dp, BorderSubtleDark, CircleShape)
+                                    .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                             )
                         } else {
                             Box(
@@ -560,7 +559,7 @@ fun PostDetailScreen(
                                     .size(42.dp)
                                     .clip(CircleShape)
                                     .background(MaterialTheme.colorScheme.primaryContainer)
-                                    .border(1.5.dp, BorderSubtleDark, CircleShape),
+                                    .border(1.5.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -612,7 +611,7 @@ fun PostDetailScreen(
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = MaterialTheme.colorScheme.surfaceVariant,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                                 ) {
                                     Text(
                                         text = if (tag.startsWith("#")) tag else "#$tag",
@@ -639,7 +638,7 @@ fun PostDetailScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
 
                     Spacer(modifier = Modifier.height(20.dp))
 
@@ -654,7 +653,7 @@ fun PostDetailScreen(
 
                     Spacer(modifier = Modifier.height(28.dp))
 
-                    HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -730,7 +729,7 @@ fun PostDetailScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                         ) {
                             Text(
                                 text = "No comments yet. Share your thoughts or ask a question!",
@@ -894,7 +893,7 @@ fun CommentItem(
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         else
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
             modifier = Modifier
@@ -907,7 +906,7 @@ fun CommentItem(
                     .size(if (isReply) 30.dp else 36.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer)
-                    .border(1.dp, BorderSubtleDark, CircleShape),
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 if (!commenterPhotoUrl.isNullOrBlank()) {

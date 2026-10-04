@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import com.devjournal.ui.theme.BorderSubtleDark
 
 /**
  * A polished, anchored M3 post options menu with icon parity
@@ -62,7 +61,7 @@ fun PostActionMenu(
             offset = DpOffset(x = 0.dp, y = 4.dp),
             modifier = Modifier
                 .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, BorderSubtleDark, RoundedCornerShape(14.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
         ) {
             if (canEdit && onEditClick != null) {
                 DropdownMenuItem(

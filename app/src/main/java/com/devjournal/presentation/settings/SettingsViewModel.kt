@@ -2,8 +2,11 @@ package com.devjournal.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.devjournal.domain.model.ThemeMode
+import com.devjournal.domain.usecase.GetThemeModeUseCase
 import com.devjournal.domain.usecase.GetUserProfileUseCase
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
+import com.devjournal.domain.usecase.SetThemeModeUseCase
 import com.devjournal.domain.usecase.SignOutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,14 +18,17 @@ import javax.inject.Inject
 
 data class SettingsUiState(
     val isSignedOut: Boolean = false,
-    val isAdmin: Boolean = false
+    val isAdmin: Boolean = false,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val signOutUseCase: SignOutUseCase,
     private val observeAuthStateUseCase: ObserveAuthStateUseCase,
-    private val getUserProfileUseCase: GetUserProfileUseCase
+    private val getUserProfileUseCase: GetUserProfileUseCase,
+    private val getThemeModeUseCase: GetThemeModeUseCase,
+    private val setThemeModeUseCase: SetThemeModeUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -30,6 +36,7 @@ class SettingsViewModel @Inject constructor(
 
     init {
         observeCurrentUser()
+        observeThemeMode()
     }
 
     private fun observeCurrentUser() {
@@ -51,6 +58,22 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    private fun observeThemeMode() {
+        viewModelScope.launch {
+            getThemeModeUseCase().collect { mode ->
+                _uiState.update {
+                    it.copy(themeMode = mode)
+                }
+            }
+        }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            setThemeModeUseCase(mode)
+        }
+    }
+
     fun onSignOutClick() {
         viewModelScope.launch {
             signOutUseCase()
@@ -58,3 +81,4 @@ class SettingsViewModel @Inject constructor(
         }
     }
 }
+

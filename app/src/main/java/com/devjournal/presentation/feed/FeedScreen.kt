@@ -91,7 +91,6 @@ import com.devjournal.presentation.components.EdgeFadeHorizontalRow
 import com.devjournal.presentation.profile.ProfileScreen
 import com.devjournal.presentation.search.SearchScreen
 import com.devjournal.presentation.util.sharePost
-import com.devjournal.ui.theme.BorderSubtleDark
 import kotlinx.coroutines.launch
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -398,7 +397,7 @@ fun FeedScreen(
                                                 modifier = Modifier
                                                     .size(72.dp)
                                                     .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-                                                    .border(1.dp, BorderSubtleDark, CircleShape),
+                                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Icon(
@@ -446,7 +445,7 @@ fun FeedScreen(
                                                 modifier = Modifier
                                                     .size(72.dp)
                                                     .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-                                                    .border(1.dp, BorderSubtleDark, CircleShape),
+                                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Icon(
@@ -494,7 +493,7 @@ fun FeedScreen(
                                                     }
                                                 },
                                                 shape = RoundedCornerShape(20.dp),
-                                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                                             ) {
                                                 Text("Find Creators to Follow")
                                             }
@@ -615,7 +614,7 @@ fun FeedScreen(
                                     containerColor = MaterialTheme.colorScheme.background,
                                     contentColor = MaterialTheme.colorScheme.primary,
                                     divider = {
-                                        HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
                                     }
                                 ) {
                                     Tab(
@@ -658,7 +657,7 @@ fun FeedScreen(
                                             border = FilterChipDefaults.filterChipBorder(
                                                 enabled = true,
                                                 selected = isSelected,
-                                                borderColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else BorderSubtleDark,
+                                                borderColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant,
                                                 selectedBorderColor = MaterialTheme.colorScheme.primary,
                                                 borderWidth = 1.dp
                                             )

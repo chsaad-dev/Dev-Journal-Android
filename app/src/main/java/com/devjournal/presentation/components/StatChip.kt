@@ -45,7 +45,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.devjournal.ui.theme.BookmarkPurple
 import com.devjournal.ui.theme.BookmarkPurpleContainer
-import com.devjournal.ui.theme.BorderSubtleDark
 import com.devjournal.ui.theme.CommentBlue
 import com.devjournal.ui.theme.LikeRed
 import com.devjournal.ui.theme.LikeRedContainer
@@ -108,7 +107,7 @@ fun StatChip(
                 if (showBorder || isActive) {
                     Modifier.border(
                         width = 1.dp,
-                        color = if (isActive) activeColor.copy(alpha = 0.35f) else BorderSubtleDark,
+                        color = if (isActive) activeColor.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outlineVariant,
                         shape = RoundedCornerShape(20.dp)
                     )
                 } else Modifier

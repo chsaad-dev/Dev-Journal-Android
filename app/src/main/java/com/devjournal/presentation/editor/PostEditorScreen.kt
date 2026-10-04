@@ -92,7 +92,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.devjournal.presentation.postdetail.RenderMarkdownBody
-import com.devjournal.ui.theme.BorderSubtleDark
 
 enum class EditorMode {
     WRITE, PREVIEW
@@ -209,7 +208,7 @@ fun PostEditorScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surfaceContainer,
-                border = BorderStroke(1.dp, BorderSubtleDark)
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Row(
                     modifier = Modifier
@@ -269,7 +268,7 @@ fun PostEditorScreen(
                                 .fillMaxWidth()
                                 .aspectRatio(16f / 9f)
                                 .clip(RoundedCornerShape(16.dp))
-                                .border(1.dp, BorderSubtleDark, RoundedCornerShape(16.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
                                 .background(MaterialTheme.colorScheme.surfaceContainer)
                                 .clickable {
                                     coverPickerLauncher.launch(
@@ -336,7 +335,7 @@ fun PostEditorScreen(
                                         modifier = Modifier
                                             .size(52.dp)
                                             .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-                                            .border(1.dp, BorderSubtleDark, CircleShape),
+                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
@@ -372,7 +371,7 @@ fun PostEditorScreen(
                             textStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = BorderSubtleDark,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                                 focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
                             )
@@ -391,7 +390,7 @@ fun PostEditorScreen(
                             textStyle = MaterialTheme.typography.bodyMedium,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = BorderSubtleDark,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                                 focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
                             )
@@ -466,7 +465,7 @@ fun PostEditorScreen(
                             ),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = BorderSubtleDark,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                                 focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
                             )
@@ -500,7 +499,7 @@ fun PostEditorScreen(
                                 shape = RoundedCornerShape(14.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = BorderSubtleDark,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                                     focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
                                 )
@@ -535,7 +534,7 @@ fun PostEditorScreen(
                                                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                                 labelColor = MaterialTheme.colorScheme.primary
                                             ),
-                                            border = BorderStroke(1.dp, BorderSubtleDark)
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                                         )
                                     }
                                 }
@@ -546,7 +545,7 @@ fun PostEditorScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .border(1.dp, BorderSubtleDark, RoundedCornerShape(16.dp)),
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainer
@@ -651,7 +650,7 @@ fun PostEditorScreen(
                                         Surface(
                                             shape = RoundedCornerShape(8.dp),
                                             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                            border = BorderStroke(1.dp, BorderSubtleDark)
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                                         ) {
                                             Text(
                                                 text = "#$tag",
@@ -688,7 +687,7 @@ fun PostEditorScreen(
                             }
 
                             HorizontalDivider(
-                                color = BorderSubtleDark,
+                                color = MaterialTheme.colorScheme.outlineVariant,
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
 
@@ -726,7 +725,7 @@ private fun EditorModeTab(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(10.dp),
         color = if (isSelected) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
-        border = if (isSelected) BorderStroke(1.dp, BorderSubtleDark) else null
+        border = if (isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null
     ) {
         Row(
             modifier = Modifier.padding(vertical = 10.dp),
@@ -763,7 +762,7 @@ private fun MarkdownToolbarAction(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = BorderStroke(1.dp, BorderSubtleDark)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Box(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),

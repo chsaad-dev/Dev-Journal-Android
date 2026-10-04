@@ -78,7 +78,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.devjournal.data.model.Post
 import com.devjournal.presentation.components.BottomImageScrim
-import com.devjournal.ui.theme.BorderSubtleDark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -281,7 +280,7 @@ fun ProfileScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth(0.9f)
-                                .border(1.dp, BorderSubtleDark, RoundedCornerShape(14.dp)),
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp)),
                             shape = RoundedCornerShape(14.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -314,7 +313,7 @@ fun ProfileScreen(
 
                                 VerticalDivider(
                                     modifier = Modifier.height(30.dp).width(1.dp),
-                                    color = BorderSubtleDark
+                                    color = MaterialTheme.colorScheme.outlineVariant
                                 )
 
                                 Column(
@@ -347,7 +346,7 @@ fun ProfileScreen(
                                     .fillMaxWidth()
                                     .padding(horizontal = 24.dp),
                                 shape = RoundedCornerShape(20.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Edit,
@@ -399,7 +398,7 @@ fun ProfileScreen(
                                 selectedTabIndex = selectedTabIndex,
                                 modifier = Modifier.fillMaxWidth(),
                                 containerColor = MaterialTheme.colorScheme.background,
-                                divider = { HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp) }
+                                divider = { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp) }
                             ) {
                                 tabs.forEachIndexed { index, title ->
                                     Tab(
@@ -417,7 +416,7 @@ fun ProfileScreen(
                         } else {
                             // Another author's profile: Section Header like Instagram posts tab
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                HorizontalDivider(color = BorderSubtleDark, thickness = 1.dp)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
                                 Spacer(modifier = Modifier.height(14.dp))
                                 Row(
                                     modifier = Modifier
@@ -481,7 +480,7 @@ fun ProfileScreen(
                                     .padding(vertical = 24.dp),
                                 shape = RoundedCornerShape(14.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                             ) {
                                 Box(
                                     modifier = Modifier.padding(24.dp),
@@ -523,7 +522,7 @@ fun ProfileScreen(
                                     .padding(vertical = 24.dp),
                                 shape = RoundedCornerShape(14.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtleDark)
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                             ) {
                                 Box(
                                     modifier = Modifier.padding(24.dp),
@@ -568,7 +567,7 @@ fun ProfilePostGridCard(
             .fillMaxWidth()
             .aspectRatio(1f)
             .clip(RoundedCornerShape(14.dp))
-            .border(1.dp, BorderSubtleDark, RoundedCornerShape(14.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
             .clickable { onClick() },
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(

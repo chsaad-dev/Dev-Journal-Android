@@ -40,7 +40,6 @@ import com.devjournal.data.model.Post
 import com.devjournal.presentation.components.BottomImageScrim
 import com.devjournal.presentation.components.PostActionMenu
 import com.devjournal.presentation.components.PostStatsBar
-import com.devjournal.ui.theme.BorderSubtleDark
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -67,7 +66,7 @@ fun PostCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, BorderSubtleDark, RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
             .clickable { onPostClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
@@ -149,7 +148,7 @@ fun PostCard(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .border(1.dp, BorderSubtleDark, CircleShape)
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                             )
                         } else {
                             Box(
@@ -157,7 +156,7 @@ fun PostCard(
                                     .size(36.dp)
                                     .clip(CircleShape)
                                     .background(MaterialTheme.colorScheme.primaryContainer)
-                                    .border(1.dp, BorderSubtleDark, CircleShape),
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -253,7 +252,7 @@ fun PostCard(
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.7f),
-                                border = BorderStroke(1.dp, BorderSubtleDark)
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                             ) {
                                 Text(
                                     text = if (tag.startsWith("#")) tag else "#$tag",
