@@ -32,6 +32,7 @@ import com.devjournal.presentation.settings.PrivacySettingsScreen
 import com.devjournal.presentation.settings.LinkedAccountsScreen
 import com.devjournal.presentation.search.SearchScreen
 import com.devjournal.presentation.splash.SplashScreen
+import androidx.core.view.WindowCompat
 import com.devjournal.ui.theme.DevJournalTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -44,6 +45,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         enableHighRefreshRate()
         targetPostId = intent?.getStringExtra("postId")
         targetUid = intent?.getStringExtra("targetUid")

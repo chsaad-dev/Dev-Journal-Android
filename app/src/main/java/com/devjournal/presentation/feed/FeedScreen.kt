@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -98,7 +100,7 @@ import kotlinx.coroutines.launch
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun FeedScreen(
     viewModel: FeedViewModel = hiltViewModel(),
@@ -222,102 +224,104 @@ fun FeedScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp,
-                windowInsets = NavigationBarDefaults.windowInsets
-            ) {
-                NavigationBarItem(
-                    selected = pagerState.currentPage == 0,
-                    onClick = {
-                        coroutineScope.launch {
-                            if (pagerState.currentPage == 0) {
-                                homeListState.animateScrollToItem(0)
-                            } else {
-                                pagerState.scrollToPage(0)
-                            }
-                        }
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = if (pagerState.currentPage == 0) Icons.Filled.Home else Icons.Outlined.Home,
-                            contentDescription = "Home"
-                        )
-                    },
-                    label = { Text("Home") },
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        selectedTextColor = MaterialTheme.colorScheme.primary
-                    )
-                )
-                NavigationBarItem(
-                    selected = pagerState.currentPage == 1,
-                    onClick = {
-                        coroutineScope.launch {
-                            if (pagerState.currentPage == 1) {
-                                feedListState.animateScrollToItem(0)
-                            } else {
-                                pagerState.scrollToPage(1)
-                                if (uiState.selectedTab == FeedTab.FOLLOWING) {
-                                    viewModel.onTabSelected(FeedTab.FOR_YOU)
+            if (!WindowInsets.isImeVisible) {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 8.dp,
+                    windowInsets = NavigationBarDefaults.windowInsets
+                ) {
+                    NavigationBarItem(
+                        selected = pagerState.currentPage == 0,
+                        onClick = {
+                            coroutineScope.launch {
+                                if (pagerState.currentPage == 0) {
+                                    homeListState.animateScrollToItem(0)
+                                } else {
+                                    pagerState.scrollToPage(0)
                                 }
                             }
-                        }
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = if (pagerState.currentPage == 1) Icons.Filled.DynamicFeed else Icons.Outlined.DynamicFeed,
-                            contentDescription = "Feed"
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = if (pagerState.currentPage == 0) Icons.Filled.Home else Icons.Outlined.Home,
+                                contentDescription = "Home"
+                            )
+                        },
+                        label = { Text("Home") },
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.primary
                         )
-                    },
-                    label = { Text("Feed") },
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        selectedTextColor = MaterialTheme.colorScheme.primary
                     )
-                )
-                NavigationBarItem(
-                    selected = pagerState.currentPage == 2,
-                    onClick = {
-                        coroutineScope.launch {
-                            pagerState.scrollToPage(2)
-                        }
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = if (pagerState.currentPage == 2) Icons.Filled.Search else Icons.Outlined.Search,
-                            contentDescription = "Search"
+                    NavigationBarItem(
+                        selected = pagerState.currentPage == 1,
+                        onClick = {
+                            coroutineScope.launch {
+                                if (pagerState.currentPage == 1) {
+                                    feedListState.animateScrollToItem(0)
+                                } else {
+                                    pagerState.scrollToPage(1)
+                                    if (uiState.selectedTab == FeedTab.FOLLOWING) {
+                                        viewModel.onTabSelected(FeedTab.FOR_YOU)
+                                    }
+                                }
+                            }
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = if (pagerState.currentPage == 1) Icons.Filled.DynamicFeed else Icons.Outlined.DynamicFeed,
+                                contentDescription = "Feed"
+                            )
+                        },
+                        label = { Text("Feed") },
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.primary
                         )
-                    },
-                    label = { Text("Search") },
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        selectedTextColor = MaterialTheme.colorScheme.primary
                     )
-                )
-                NavigationBarItem(
-                    selected = pagerState.currentPage == 3,
-                    onClick = {
-                        coroutineScope.launch {
-                            pagerState.scrollToPage(3)
-                        }
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = if (pagerState.currentPage == 3) Icons.Filled.Person else Icons.Outlined.Person,
-                            contentDescription = "Profile"
+                    NavigationBarItem(
+                        selected = pagerState.currentPage == 2,
+                        onClick = {
+                            coroutineScope.launch {
+                                pagerState.scrollToPage(2)
+                            }
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = if (pagerState.currentPage == 2) Icons.Filled.Search else Icons.Outlined.Search,
+                                contentDescription = "Search"
+                            )
+                        },
+                        label = { Text("Search") },
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.primary
                         )
-                    },
-                    label = { Text("Profile") },
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        selectedTextColor = MaterialTheme.colorScheme.primary
                     )
-                )
+                    NavigationBarItem(
+                        selected = pagerState.currentPage == 3,
+                        onClick = {
+                            coroutineScope.launch {
+                                pagerState.scrollToPage(3)
+                            }
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = if (pagerState.currentPage == 3) Icons.Filled.Person else Icons.Outlined.Person,
+                                contentDescription = "Profile"
+                            )
+                        },
+                        label = { Text("Profile") },
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
             }
         }
     ) { paddingValues ->
