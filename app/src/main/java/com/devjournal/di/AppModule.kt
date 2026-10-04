@@ -8,11 +8,13 @@ import com.devjournal.data.model.local.DraftDao
 import com.devjournal.data.remote.CloudinaryUploader
 import com.devjournal.data.remote.NotifyWorkerApi
 import com.devjournal.data.repository.AuthRepositoryImpl
+import com.devjournal.data.repository.BugReportRepositoryImpl
 import com.devjournal.data.repository.CommentRepositoryImpl
 import com.devjournal.data.repository.DraftRepositoryImpl
 import com.devjournal.data.repository.PostRepositoryImpl
 import com.devjournal.data.repository.UserRepositoryImpl
 import com.devjournal.domain.repository.AuthRepository
+import com.devjournal.domain.repository.BugReportRepository
 import com.devjournal.domain.repository.CommentRepository
 import com.devjournal.domain.repository.DraftRepository
 import com.devjournal.domain.repository.PostRepository
@@ -68,6 +70,12 @@ abstract class AppModule {
     abstract fun bindNetworkMonitor(
         networkMonitorImpl: com.devjournal.util.ConnectivityNetworkMonitor
     ): com.devjournal.util.NetworkMonitor
+
+    @Binds
+    @Singleton
+    abstract fun bindBugReportRepository(
+        impl: BugReportRepositoryImpl
+    ): BugReportRepository
 
     companion object {
         @Provides
