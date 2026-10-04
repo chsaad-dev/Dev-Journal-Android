@@ -139,6 +139,14 @@ fun FeedScreen(
         }
     }
 
+    LaunchedEffect(uiState.errorMessage) {
+        val error = uiState.errorMessage
+        if (!error.isNullOrBlank()) {
+            snackbarHostState.showSnackbar(error)
+            viewModel.clearErrorMessage()
+        }
+    }
+
     // Intercept physical/gesture Back button when not on Home page (directly switch to Home)
     BackHandler(enabled = pagerState.currentPage != 0) {
         coroutineScope.launch {

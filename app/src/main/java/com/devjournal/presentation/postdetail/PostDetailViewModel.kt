@@ -21,13 +21,16 @@ import com.devjournal.domain.usecase.GetUserProfileUseCase
 import com.devjournal.domain.usecase.LikePostUseCase
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
 import com.devjournal.domain.usecase.RecordViewUseCase
+import com.devjournal.util.NetworkMonitor
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 
 data class PostDetailUiState(
@@ -36,6 +39,7 @@ data class PostDetailUiState(
     val isLoading: Boolean = true,
     val isLiked: Boolean = false,
     val isBookmarked: Boolean = false,
+    val isOnline: Boolean = true,
     val currentUserId: String? = null,
     val commentInput: String = "",
     val isSubmittingComment: Boolean = false,
@@ -74,6 +78,7 @@ class PostDetailViewModel @Inject constructor(
     private val notifyWorkerApi: NotifyWorkerApi,
     private val recordViewUseCase: RecordViewUseCase,
     private val getPostViewersUseCase: GetPostViewersUseCase,
+    private val networkMonitor: NetworkMonitor,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -85,9 +90,18 @@ class PostDetailViewModel @Inject constructor(
     private var viewRecorded = false
 
     init {
+        observeNetworkState()
         observePost()
         observeComments()
         observeAuthAndLikeState()
+    }
+
+    private fun observeNetworkState() {
+        viewModelScope.launch {
+            networkMonitor.isOnline.collect { online ->
+                _uiState.update { it.copy(isOnline = online) }
+            }
+        }
     }
 
     private fun observePost() {
@@ -196,17 +210,30 @@ class PostDetailViewModel @Inject constructor(
         val currentPost = _uiState.value.post ?: return
         val alreadyLiked = _uiState.value.isLiked
 
+        if (!networkMonitor.isOnline()) {
+            _uiState.update { it.copy(errorMessage = "You are currently offline. Connect to the internet to like articles.") }
+            return
+        }
+
         viewModelScope.launch {
             try {
-                likePostUseCase(postId, uid, alreadyLiked)
-                if (!alreadyLiked && currentPost.authorId.isNotBlank() && currentPost.authorId != uid) {
-                    notifyWorkerApi.sendNotification(
-                        type = "new_like",
-                        targetUid = currentPost.authorId,
-                        title = "New like on \"${currentPost.title}\"",
-                        body = "Someone liked your post"
-                    )
+                withTimeout(8000L) {
+                    likePostUseCase(postId, uid, alreadyLiked)
                 }
+                if (!alreadyLiked && currentPost.authorId.isNotBlank() && currentPost.authorId != uid) {
+                    try {
+                        notifyWorkerApi.sendNotification(
+                            type = "new_like",
+                            targetUid = currentPost.authorId,
+                            title = "New like on \"${currentPost.title}\"",
+                            body = "Someone liked your post"
+                        )
+                    } catch (notifErr: Exception) {
+                        Log.w("DevJournal", "Failed to send like notification", notifErr)
+                    }
+                }
+            } catch (e: TimeoutCancellationException) {
+                _uiState.update { it.copy(errorMessage = "Network request timed out. Please check your connection.") }
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = "Failed to update like: ${e.message}") }
             }
@@ -260,6 +287,16 @@ class PostDetailViewModel @Inject constructor(
 
         if (text.isBlank()) return
 
+        if (!networkMonitor.isOnline()) {
+            _uiState.update {
+                it.copy(
+                    isSubmittingComment = false,
+                    errorMessage = "You are currently offline. Connect to the internet to post comments."
+                )
+            }
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmittingComment = true, errorMessage = null) }
             try {
@@ -269,40 +306,67 @@ class PostDetailViewModel @Inject constructor(
                     parentCommentId = replyingComment?.id,
                     replyToUsername = replyingName
                 )
-                addCommentUseCase(postId, newComment)
-
-                // Send notification to author or replied commenter
-                if (replyingComment != null && replyingComment.userId != uid) {
-                    notifyWorkerApi.sendNotification(
-                        type = "comment_reply",
-                        targetUid = replyingComment.userId,
-                        title = "Reply to your comment",
-                        body = text.take(100)
-                    )
-                } else if (currentPost.authorId.isNotBlank() && currentPost.authorId != uid) {
-                    notifyWorkerApi.sendNotification(
-                        type = "new_comment",
-                        targetUid = currentPost.authorId,
-                        title = "New comment on \"${currentPost.title}\"",
-                        body = text.take(100)
-                    )
+                withTimeout(10000L) {
+                    addCommentUseCase(postId, newComment)
                 }
+
+                // Send notification to author or replied commenter (best-effort)
+                try {
+                    if (replyingComment != null && replyingComment.userId != uid) {
+                        notifyWorkerApi.sendNotification(
+                            type = "comment_reply",
+                            targetUid = replyingComment.userId,
+                            title = "Reply to your comment",
+                            body = text.take(100)
+                        )
+                    } else if (currentPost.authorId.isNotBlank() && currentPost.authorId != uid) {
+                        notifyWorkerApi.sendNotification(
+                            type = "new_comment",
+                            targetUid = currentPost.authorId,
+                            title = "New comment on \"${currentPost.title}\"",
+                            body = text.take(100)
+                        )
+                    }
+                } catch (notifErr: Exception) {
+                    Log.w("DevJournal", "Failed to send comment notification", notifErr)
+                }
+
                 _uiState.update { 
                     it.copy(
                         commentInput = "", 
                         replyingToComment = null,
                         replyingToAuthorName = null,
-                        isSubmittingComment = false
+                        isSubmittingComment = false,
+                        errorMessage = null
+                    ) 
+                }
+            } catch (e: TimeoutCancellationException) {
+                Log.e("DevJournal", "Comment action timed out", e)
+                _uiState.update { 
+                    it.copy(
+                        isSubmittingComment = false, 
+                        errorMessage = "Network request timed out. Please check your internet connection."
                     ) 
                 }
             } catch (e: Exception) {
                 Log.e("DevJournal", "Comment action failed", e)
-                _uiState.update { it.copy(isSubmittingComment = false, errorMessage = "Failed to post comment: ${e.message}") }
+                val userMsg = if (e.message?.contains("offline", ignoreCase = true) == true ||
+                    e.message?.contains("unavailable", ignoreCase = true) == true ||
+                    e.message?.contains("network", ignoreCase = true) == true) {
+                    "You are currently offline. Connect to the internet to post comments."
+                } else {
+                    e.message ?: "Failed to post comment"
+                }
+                _uiState.update { it.copy(isSubmittingComment = false, errorMessage = userMsg) }
             }
         }
     }
 
     fun onDeletePost() {
+        if (!networkMonitor.isOnline()) {
+            _uiState.update { it.copy(errorMessage = "You are currently offline. Connect to the internet to delete posts.") }
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isDeletingPost = true, errorMessage = null) }
             val result = deletePostUseCase(postId)
@@ -316,6 +380,10 @@ class PostDetailViewModel @Inject constructor(
     }
 
     fun onDeleteComment(commentId: String) {
+        if (!networkMonitor.isOnline()) {
+            _uiState.update { it.copy(errorMessage = "You are currently offline. Connect to the internet to delete comments.") }
+            return
+        }
         viewModelScope.launch {
             try {
                 deleteCommentUseCase(postId, commentId)
@@ -324,5 +392,9 @@ class PostDetailViewModel @Inject constructor(
                 _uiState.update { it.copy(errorMessage = "Failed to delete comment: ${e.message}") }
             }
         }
+    }
+
+    fun clearErrorMessage() {
+        _uiState.update { it.copy(errorMessage = null) }
     }
 }

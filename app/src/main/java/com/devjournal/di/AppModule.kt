@@ -63,6 +63,12 @@ abstract class AppModule {
         draftRepositoryImpl: DraftRepositoryImpl
     ): DraftRepository
 
+    @Binds
+    @Singleton
+    abstract fun bindNetworkMonitor(
+        networkMonitorImpl: com.devjournal.util.ConnectivityNetworkMonitor
+    ): com.devjournal.util.NetworkMonitor
+
     companion object {
         @Provides
         @Singleton

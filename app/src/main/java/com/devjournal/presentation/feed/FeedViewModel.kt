@@ -13,6 +13,7 @@ import com.devjournal.domain.usecase.BookmarkPostUseCase
 import com.devjournal.domain.usecase.DeletePostUseCase
 import com.devjournal.domain.usecase.ObserveLikedPostIdsUseCase
 import com.devjournal.domain.usecase.ObserveBookmarkedPostIdsUseCase
+import com.devjournal.util.NetworkMonitor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,6 +42,7 @@ data class FeedUiState(
     val isLoading: Boolean = true,
     val isFollowingLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    val isOnline: Boolean = true,
     val selectedTag: String = "All",
     val availableTags: List<String> = listOf("All", "Android", "Compose", "Kotlin", "Architecture", "Firebase"),
     val isAdmin: Boolean = false,
@@ -65,7 +67,8 @@ class FeedViewModel @Inject constructor(
     private val getUserProfileUseCase: GetUserProfileUseCase,
     private val observeLikedPostIdsUseCase: ObserveLikedPostIdsUseCase,
     private val observeBookmarkedPostIdsUseCase: ObserveBookmarkedPostIdsUseCase,
-    private val deletePostUseCase: DeletePostUseCase
+    private val deletePostUseCase: DeletePostUseCase,
+    private val networkMonitor: NetworkMonitor
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FeedUiState())
@@ -77,8 +80,17 @@ class FeedViewModel @Inject constructor(
     private val _postLimit = MutableStateFlow(10)
 
     init {
+        observeNetworkState()
         observeCurrentUser()
         observePosts()
+    }
+
+    private fun observeNetworkState() {
+        viewModelScope.launch {
+            networkMonitor.isOnline.collect { online ->
+                _uiState.update { it.copy(isOnline = online) }
+            }
+        }
     }
 
     private fun observeCurrentUser() {
@@ -203,6 +215,15 @@ class FeedViewModel @Inject constructor(
 
     fun refreshFeed() {
         val uid = _uiState.value.currentUserId
+        if (!networkMonitor.isOnline()) {
+            _uiState.update { 
+                it.copy(
+                    isRefreshing = false, 
+                    errorMessage = "You are currently offline. Connect to internet to refresh feeds."
+                ) 
+            }
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
             try {
@@ -265,6 +286,10 @@ class FeedViewModel @Inject constructor(
 
     fun onLikeClick(postId: String, alreadyLiked: Boolean) {
         val uid = _uiState.value.currentUserId ?: return
+        if (!networkMonitor.isOnline()) {
+            _uiState.update { it.copy(errorMessage = "You are currently offline. Connect to the internet to like articles.") }
+            return
+        }
         viewModelScope.launch {
             // Optimistic update
             _uiState.update { state ->
@@ -345,5 +370,9 @@ class FeedViewModel @Inject constructor(
             FeedTab.TRENDING -> filtered.sortedByDescending { it.likeCount + it.commentCount }
             FeedTab.FOLLOWING -> filtered.sortedByDescending { it.createdAt?.seconds ?: 0L }
         }
+    }
+
+    fun clearErrorMessage() {
+        _uiState.update { it.copy(errorMessage = null) }
     }
 }
