@@ -36,6 +36,7 @@ import com.devjournal.presentation.support.MyReportsScreen
 import com.devjournal.presentation.guide.AppGuideScreen
 import com.devjournal.presentation.search.SearchScreen
 import com.devjournal.presentation.splash.SplashScreen
+import com.devjournal.presentation.util.DeepLinkUtils
 import androidx.core.view.WindowCompat
 import com.devjournal.ui.theme.DevJournalTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -51,7 +52,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         enableHighRefreshRate()
-        targetPostId = intent?.getStringExtra("postId")
+        val resolvedPostId = extractPostIdFromIntent(intent)
+        targetPostId = resolvedPostId
         targetUid = intent?.getStringExtra("targetUid")
 
         FirebaseAuth.getInstance().currentUser?.getIdToken(false)?.addOnSuccessListener { result ->
@@ -84,7 +86,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                val initialPostId = intent?.getStringExtra("postId")
+                val initialPostId = extractPostIdFromIntent(intent)
                 val initialTargetUid = intent?.getStringExtra("targetUid")
 
                 NavHost(
@@ -349,7 +351,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        val postId = intent.getStringExtra("postId")
+        val postId = extractPostIdFromIntent(intent)
         if (!postId.isNullOrBlank()) {
             targetPostId = postId
         }
@@ -357,6 +359,10 @@ class MainActivity : ComponentActivity() {
         if (!uid.isNullOrBlank()) {
             targetUid = uid
         }
+    }
+
+    private fun extractPostIdFromIntent(intent: Intent?): String? {
+        return DeepLinkUtils.extractPostIdFromIntent(intent)
     }
 
     private fun enableHighRefreshRate() {
