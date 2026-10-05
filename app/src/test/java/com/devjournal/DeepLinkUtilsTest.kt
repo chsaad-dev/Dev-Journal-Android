@@ -89,4 +89,35 @@ class DeepLinkUtilsTest {
         )
         assertNull(postId)
     }
+
+    @Test
+    fun extractPostId_httpsAppLink_withQueryParam_stripsQueryParam() {
+        val postId = DeepLinkUtils.extractPostId(
+            scheme = "https",
+            host = "devjournal-web.vercel.app",
+            path = "/posts/Ip0M2dtBZH8rzBJh9H1z?v=1728144000"
+        )
+        assertEquals("Ip0M2dtBZH8rzBJh9H1z", postId)
+    }
+
+    @Test
+    fun extractPostId_customScheme_withQueryParam_stripsQueryParam() {
+        val postId = DeepLinkUtils.extractPostId(
+            scheme = "devjournal",
+            host = "posts",
+            path = "/customPost123?v=1728144000"
+        )
+        assertEquals("customPost123", postId)
+    }
+
+    @Test
+    fun extractPostId_queryParameter_withFragment_stripsFragment() {
+        val postId = DeepLinkUtils.extractPostId(
+            scheme = "https",
+            host = "devjournal-web.vercel.app",
+            path = "/posts",
+            queryPostId = "queryPost123?v=123#section"
+        )
+        assertEquals("queryPost123", postId)
+    }
 }

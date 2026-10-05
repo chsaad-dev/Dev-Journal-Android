@@ -5,7 +5,7 @@ import android.content.Intent
 import com.devjournal.data.model.Post
 
 fun sharePost(context: Context, post: Post) {
-    val shareUrl = DeepLinkUtils.buildPostWebUrl(post.id)
+    val shareUrl = DeepLinkUtils.buildPostWebUrl(post.id) + "?v=${post.updatedAt?.seconds ?: 0}"
     val shareText = "${post.title}\n\n$shareUrl"
 
     val sendIntent: Intent = Intent().apply {

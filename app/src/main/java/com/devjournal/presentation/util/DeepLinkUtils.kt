@@ -52,12 +52,12 @@ object DeepLinkUtils {
         queryPostId: String? = null
     ): String? {
         if (!queryPostId.isNullOrBlank()) {
-            return queryPostId
+            return queryPostId.substringBefore('?').substringBefore('#')
         }
 
         val normalizedScheme = scheme?.lowercase() ?: return null
         val normalizedHost = host?.lowercase() ?: ""
-        val cleanPath = path?.trim('/') ?: ""
+        val cleanPath = (path ?: "").substringBefore('?').substringBefore('#').trim('/')
         val segments = cleanPath.split('/').filter { it.isNotBlank() }
 
         // App Link: https://devjournal-web.vercel.app/posts/{postId}
@@ -65,7 +65,7 @@ object DeepLinkUtils {
             if (normalizedHost == WEB_HOST || normalizedHost == LEGACY_HOST) {
                 val postsIndex = segments.indexOf("posts")
                 if (postsIndex != -1 && postsIndex + 1 < segments.size) {
-                    val candidate = segments[postsIndex + 1]
+                    val candidate = segments[postsIndex + 1].substringBefore('?').substringBefore('#')
                     if (candidate.isNotBlank()) {
                         return candidate
                     }
@@ -76,14 +76,14 @@ object DeepLinkUtils {
         // Custom Scheme: devjournal://posts/{postId}
         if (normalizedScheme == CUSTOM_SCHEME) {
             if (normalizedHost == "posts") {
-                val candidate = segments.firstOrNull()
+                val candidate = segments.firstOrNull()?.substringBefore('?')?.substringBefore('#')
                 if (!candidate.isNullOrBlank()) {
                     return candidate
                 }
             } else {
                 val postsIndex = segments.indexOf("posts")
                 if (postsIndex != -1 && postsIndex + 1 < segments.size) {
-                    val candidate = segments[postsIndex + 1]
+                    val candidate = segments[postsIndex + 1].substringBefore('?').substringBefore('#')
                     if (candidate.isNotBlank()) {
                         return candidate
                     }
