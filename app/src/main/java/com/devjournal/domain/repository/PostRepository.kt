@@ -1,9 +1,17 @@
 package com.devjournal.domain.repository
 
 import com.devjournal.data.model.Post
+import com.devjournal.data.model.PostPage
+import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.flow.Flow
 
 interface PostRepository {
+    suspend fun getPublishedPostsPage(
+        pageSize: Int = 10,
+        startAfter: DocumentSnapshot? = null,
+        tag: String? = null
+    ): Result<PostPage>
+
     fun getPublishedPosts(limit: Int = 10): Flow<List<Post>>
     fun getPostsByAuthor(authorId: String): Flow<List<Post>>
     fun getPostById(postId: String): Flow<Post?>

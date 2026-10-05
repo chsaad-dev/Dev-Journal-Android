@@ -1,11 +1,13 @@
 package com.devjournal.data.repository
 
 import com.devjournal.data.model.Post
+import com.devjournal.data.model.PostPage
 import com.devjournal.data.model.PostViewer
 import com.devjournal.data.model.local.BookmarkedPostDao
 import com.devjournal.data.model.local.toBookmarkedPostEntity
 import com.devjournal.data.model.local.toPost
 import com.devjournal.domain.repository.PostRepository
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -20,6 +22,43 @@ class PostRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val bookmarkedPostDao: BookmarkedPostDao
 ) : PostRepository {
+
+    override suspend fun getPublishedPostsPage(
+        pageSize: Int,
+        startAfter: DocumentSnapshot?,
+        tag: String?
+    ): Result<PostPage> = runCatching {
+        var baseQuery: Query = firestore.collection("posts")
+            .whereEqualTo("published", true)
+
+        val cleanTag = tag?.trim()?.removePrefix("#")
+        if (!cleanTag.isNullOrBlank() && !cleanTag.equals("All", ignoreCase = true)) {
+            baseQuery = baseQuery.whereArrayContains("tags", cleanTag)
+        }
+
+        var query = baseQuery
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit((pageSize + 1).toLong())
+
+        if (startAfter != null) {
+            query = query.startAfter(startAfter)
+        }
+
+        val snapshot = query.get().await()
+        val docs = snapshot.documents
+        val hasMore = docs.size > pageSize
+        val pageDocs = if (hasMore) docs.take(pageSize) else docs
+        val posts = pageDocs.mapNotNull { doc ->
+            doc.toObject(Post::class.java)?.copy(id = doc.id)
+        }
+        val lastDoc = pageDocs.lastOrNull()
+
+        PostPage(
+            posts = posts,
+            lastVisibleDocument = lastDoc,
+            hasMore = hasMore
+        )
+    }
 
     override fun getPublishedPosts(limit: Int): Flow<List<Post>> = callbackFlow {
         val listener = firestore.collection("posts")

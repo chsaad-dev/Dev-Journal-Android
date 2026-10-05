@@ -158,11 +158,16 @@ fun FeedScreen(
         }
     }
 
+    // Reset discovery feed scroll when switching tags
+    LaunchedEffect(uiState.selectedTag) {
+        feedListState.scrollToItem(0)
+    }
+
     // Trigger loadMorePosts when scrolled near the bottom of discovery feed
-    LaunchedEffect(feedListState) {
+    LaunchedEffect(feedListState, uiState.hasMorePosts, uiState.isLoadingNextPage) {
         snapshotFlow { feedListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .collect { lastIndex ->
-                if (lastIndex != null && lastIndex >= uiState.posts.size - 3) {
+                if (lastIndex != null && uiState.posts.isNotEmpty() && lastIndex >= uiState.posts.size - 2) {
                     viewModel.loadMorePosts()
                 }
             }
@@ -748,6 +753,35 @@ fun FeedScreen(
                                                 onDeleteClick = { postToDeleteId = post.id },
                                                 onAuthorClick = onAuthorClick
                                             )
+                                        }
+
+                                        if (uiState.isLoadingNextPage) {
+                                            item(key = "loading_footer") {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(vertical = 16.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(28.dp),
+                                                        strokeWidth = 2.5.dp,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
+                                        } else if (!uiState.hasMorePosts && uiState.posts.isNotEmpty()) {
+                                            item(key = "end_of_feed_footer") {
+                                                Text(
+                                                    text = "You're all caught up",
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                                    textAlign = TextAlign.Center,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(vertical = 16.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }

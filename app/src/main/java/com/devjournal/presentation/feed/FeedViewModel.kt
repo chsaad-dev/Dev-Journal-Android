@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import com.google.firebase.firestore.DocumentSnapshot
 import javax.inject.Inject
 
 enum class FeedSortOption {
@@ -54,7 +55,10 @@ data class FeedUiState(
     val selectedSortOption: FeedSortOption = FeedSortOption.LATEST,
     val authorNames: Map<String, String> = emptyMap(),
     val authorPhotoUrls: Map<String, String> = emptyMap(),
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val lastVisibleDocument: DocumentSnapshot? = null,
+    val hasMorePosts: Boolean = true,
+    val isLoadingNextPage: Boolean = false
 )
 
 @HiltViewModel
@@ -77,12 +81,10 @@ class FeedViewModel @Inject constructor(
     private var postsJob: Job? = null
     private var followingPostsJob: Job? = null
     
-    private val _postLimit = MutableStateFlow(10)
-
     init {
         observeNetworkState()
         observeCurrentUser()
-        observePosts()
+        fetchInitialPosts("All")
     }
 
     private fun observeNetworkState() {
@@ -106,7 +108,7 @@ class FeedViewModel @Inject constructor(
                         )
                     }
                     observeInteractions(user.uid)
-                    observeFollowingPosts(user.uid, _postLimit.value)
+                    observeFollowingPosts(user.uid, 20)
                 } else {
                     interactionsJob?.cancel()
                     followingPostsJob?.cancel()
@@ -146,27 +148,49 @@ class FeedViewModel @Inject constructor(
         }
     }
 
-    private fun observePosts() {
-        viewModelScope.launch {
-            _postLimit.collect { limit ->
-                postsJob?.cancel()
-                val currentUid = _uiState.value.currentUserId
-                if (currentUid != null) {
-                    observeFollowingPosts(currentUid, limit)
-                }
-                postsJob = launch {
-                    getPostsUseCase(limit).collect { postsList ->
-                        resolveMissingAuthors(postsList)
+    fun fetchInitialPosts(tag: String = _uiState.value.selectedTag) {
+        postsJob?.cancel()
+        postsJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    selectedTag = tag,
+                    lastVisibleDocument = null,
+                    hasMorePosts = true
+                )
+            }
+            val result = getPostsUseCase.getPage(
+                pageSize = 10,
+                startAfter = null,
+                tag = tag
+            )
+            result.onSuccess { page ->
+                // Resolve authors ONLY for new page
+                resolveMissingAuthors(page.posts)
 
-                        _uiState.update { state ->
-                            val filteredAndSorted = filterAndSortPosts(postsList, state.selectedTag, state.selectedTab)
-                            state.copy(
-                                allPosts = postsList,
-                                posts = if (state.selectedTab != FeedTab.FOLLOWING) filteredAndSorted else state.posts,
-                                isLoading = if (state.selectedTab != FeedTab.FOLLOWING) false else state.isLoading
-                            )
-                        }
+                _uiState.update { state ->
+                    val displayPosts = if (state.selectedTab == FeedTab.TRENDING) {
+                        page.posts.sortedByDescending { it.likeCount + it.commentCount }
+                    } else {
+                        page.posts
                     }
+                    state.copy(
+                        posts = if (state.selectedTab != FeedTab.FOLLOWING) displayPosts else state.posts,
+                        allPosts = page.posts,
+                        lastVisibleDocument = page.lastVisibleDocument,
+                        hasMorePosts = page.hasMore,
+                        isLoading = false,
+                        isRefreshing = false
+                    )
+                }
+            }.onFailure { error ->
+                Log.e("DevJournal", "Failed to fetch posts page", error)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        errorMessage = "Failed to load posts: ${error.message}"
+                    )
                 }
             }
         }
@@ -178,11 +202,10 @@ class FeedViewModel @Inject constructor(
             getFollowingPostsUseCase(uid, limit).collect { postsList ->
                 resolveMissingAuthors(postsList)
                 _uiState.update { state ->
-                    val filteredAndSorted = filterAndSortPosts(postsList, state.selectedTag, state.selectedTab)
                     state.copy(
                         followingPosts = postsList,
                         isFollowingLoading = false,
-                        posts = if (state.selectedTab == FeedTab.FOLLOWING) filteredAndSorted else state.posts,
+                        posts = if (state.selectedTab == FeedTab.FOLLOWING) postsList else state.posts,
                         isLoading = if (state.selectedTab == FeedTab.FOLLOWING) false else state.isLoading
                     )
                 }
@@ -190,10 +213,10 @@ class FeedViewModel @Inject constructor(
         }
     }
 
-    private suspend fun resolveMissingAuthors(postsList: List<Post>) {
+    private suspend fun resolveMissingAuthors(newPosts: List<Post>) {
         val currentNames = _uiState.value.authorNames.toMutableMap()
         val currentPhotos = _uiState.value.authorPhotoUrls.toMutableMap()
-        val missingIds = postsList.map { it.authorId }.distinct().filter { !currentNames.containsKey(it) && it.isNotBlank() }
+        val missingIds = newPosts.map { it.authorId }.distinct().filter { !currentNames.containsKey(it) && it.isNotBlank() }
         
         missingIds.forEach { uid ->
             val profile = getUserProfileUseCase(uid)
@@ -210,7 +233,51 @@ class FeedViewModel @Inject constructor(
     }
 
     fun loadMorePosts() {
-        _postLimit.update { it + 10 }
+        val state = _uiState.value
+        if (state.selectedTab == FeedTab.FOLLOWING) {
+            return
+        }
+        if (state.isLoading || state.isLoadingNextPage || !state.hasMorePosts) {
+            return
+        }
+        val lastDoc = state.lastVisibleDocument ?: return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingNextPage = true) }
+            val result = getPostsUseCase.getPage(
+                pageSize = 10,
+                startAfter = lastDoc,
+                tag = state.selectedTag
+            )
+            result.onSuccess { page ->
+                // Resolve missing authors ONLY for newly appended page
+                resolveMissingAuthors(page.posts)
+
+                _uiState.update { current ->
+                    val combinedAll = (current.allPosts + page.posts).distinctBy { it.id }
+                    val displayPosts = if (current.selectedTab == FeedTab.TRENDING) {
+                        combinedAll.sortedByDescending { it.likeCount + it.commentCount }
+                    } else {
+                        (current.posts + page.posts).distinctBy { it.id }
+                    }
+                    current.copy(
+                        posts = displayPosts,
+                        allPosts = combinedAll,
+                        lastVisibleDocument = page.lastVisibleDocument,
+                        hasMorePosts = page.hasMore,
+                        isLoadingNextPage = false
+                    )
+                }
+            }.onFailure { error ->
+                Log.e("DevJournal", "Failed to load more posts", error)
+                _uiState.update {
+                    it.copy(
+                        isLoadingNextPage = false,
+                        errorMessage = "Failed to load more posts"
+                    )
+                }
+            }
+        }
     }
 
     fun refreshFeed() {
@@ -224,34 +291,11 @@ class FeedViewModel @Inject constructor(
             }
             return
         }
-        viewModelScope.launch {
-            _uiState.update { it.copy(isRefreshing = true) }
-            try {
-                _postLimit.value = 10
-                if (uid != null) {
-                    observeFollowingPosts(uid, 10)
-                }
-                postsJob?.cancel()
-                postsJob = launch {
-                    getPostsUseCase(10).collect { postsList ->
-                        resolveMissingAuthors(postsList)
-                        _uiState.update { state ->
-                            val filteredAndSorted = filterAndSortPosts(postsList, state.selectedTag, state.selectedTab)
-                            state.copy(
-                                allPosts = postsList,
-                                posts = if (state.selectedTab != FeedTab.FOLLOWING) filteredAndSorted else state.posts,
-                                isLoading = false,
-                                isFollowingLoading = false,
-                                isRefreshing = false
-                            )
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("DevJournal", "Failed to refresh feed", e)
-                _uiState.update { it.copy(isRefreshing = false) }
-            }
+        _uiState.update { it.copy(isRefreshing = true) }
+        if (uid != null) {
+            observeFollowingPosts(uid, 20)
         }
+        fetchInitialPosts(_uiState.value.selectedTag)
     }
 
     fun onTabSelected(tab: FeedTab) {
@@ -259,11 +303,15 @@ class FeedViewModel @Inject constructor(
         
         _uiState.update { state ->
             val sourcePosts = if (tab == FeedTab.FOLLOWING) state.followingPosts else state.allPosts
-            val filteredAndSorted = filterAndSortPosts(sourcePosts, state.selectedTag, tab)
+            val displayPosts = when (tab) {
+                FeedTab.FOR_YOU -> sourcePosts.sortedByDescending { it.createdAt?.seconds ?: 0L }
+                FeedTab.TRENDING -> sourcePosts.sortedByDescending { it.likeCount + it.commentCount }
+                FeedTab.FOLLOWING -> sourcePosts
+            }
             state.copy(
                 selectedTab = tab,
                 selectedSortOption = if (tab == FeedTab.TRENDING) FeedSortOption.TRENDING else FeedSortOption.LATEST,
-                posts = filteredAndSorted
+                posts = displayPosts
             )
         }
     }
@@ -274,14 +322,8 @@ class FeedViewModel @Inject constructor(
     }
 
     fun onTagSelected(tag: String) {
-        _uiState.update { state ->
-            val sourcePosts = if (state.selectedTab == FeedTab.FOLLOWING) state.followingPosts else state.allPosts
-            val filteredAndSorted = filterAndSortPosts(sourcePosts, tag, state.selectedTab)
-            state.copy(
-                selectedTag = tag,
-                posts = filteredAndSorted
-            )
-        }
+        if (_uiState.value.selectedTag.equals(tag, ignoreCase = true) && !_uiState.value.isLoading) return
+        fetchInitialPosts(tag = tag)
     }
 
     fun onLikeClick(postId: String, alreadyLiked: Boolean) {
@@ -356,21 +398,6 @@ class FeedViewModel @Inject constructor(
         }
     }
 
-    private fun filterAndSortPosts(posts: List<Post>, tag: String, tab: FeedTab): List<Post> {
-        val filtered = if (tag.equals("All", ignoreCase = true)) {
-            posts
-        } else {
-            posts.filter { post ->
-                post.tags.any { it.equals(tag, ignoreCase = true) || it.equals("#$tag", ignoreCase = true) }
-            }
-        }
-        
-        return when (tab) {
-            FeedTab.FOR_YOU -> filtered.sortedByDescending { it.createdAt?.seconds ?: 0L }
-            FeedTab.TRENDING -> filtered.sortedByDescending { it.likeCount + it.commentCount }
-            FeedTab.FOLLOWING -> filtered.sortedByDescending { it.createdAt?.seconds ?: 0L }
-        }
-    }
 
     fun clearErrorMessage() {
         _uiState.update { it.copy(errorMessage = null) }
