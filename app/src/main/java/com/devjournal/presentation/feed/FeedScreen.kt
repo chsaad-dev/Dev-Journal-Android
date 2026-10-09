@@ -46,6 +46,8 @@ import androidx.compose.material.icons.outlined.PeopleOutline
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -108,6 +110,7 @@ fun FeedScreen(
     onNewPostClick: () -> Unit,
     onEditPostClick: (String) -> Unit = {},
     onNotificationsClick: () -> Unit = {},
+    unreadNotificationCount: Int = 0,
     onAuthorClick: (String) -> Unit = {},
     onDraftClick: (String) -> Unit = {},
     onSettingsClick: () -> Unit = {},
@@ -357,12 +360,24 @@ fun FeedScreen(
                                         )
                                     },
                                     actions = {
-                                        IconButton(onClick = onNotificationsClick) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Notifications,
-                                                contentDescription = "Notifications",
-                                                tint = MaterialTheme.colorScheme.onSurface
-                                            )
+                                        BadgedBox(
+                                            badge = {
+                                                if (unreadNotificationCount > 0) {
+                                                    Badge {
+                                                        Text(
+                                                            text = if (unreadNotificationCount > 9) "9+" else unreadNotificationCount.toString()
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        ) {
+                                            IconButton(onClick = onNotificationsClick) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Notifications,
+                                                    contentDescription = "Notifications",
+                                                    tint = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
                                         }
                                     },
                                     colors = TopAppBarDefaults.topAppBarColors(
@@ -584,12 +599,24 @@ fun FeedScreen(
                                         )
                                     },
                                     actions = {
-                                        IconButton(onClick = onNotificationsClick) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Notifications,
-                                                contentDescription = "Notifications",
-                                                tint = MaterialTheme.colorScheme.onSurface
-                                            )
+                                        BadgedBox(
+                                            badge = {
+                                                if (unreadNotificationCount > 0) {
+                                                    Badge {
+                                                        Text(
+                                                            text = if (unreadNotificationCount > 9) "9+" else unreadNotificationCount.toString()
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        ) {
+                                            IconButton(onClick = onNotificationsClick) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Notifications,
+                                                    contentDescription = "Notifications",
+                                                    tint = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
                                         }
                                     },
                                     colors = TopAppBarDefaults.topAppBarColors(

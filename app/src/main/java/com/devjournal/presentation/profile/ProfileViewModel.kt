@@ -268,7 +268,7 @@ class ProfileViewModel @Inject constructor(
                             targetUid = targetUid,
                             title = "$currentUserName started following you",
                             body = "Tap to view their profile",
-                            data = mapOf("type" to "follow", "targetUid" to currentUid)
+                            data = mapOf("senderUid" to currentUid)
                         )
                     }
                 }

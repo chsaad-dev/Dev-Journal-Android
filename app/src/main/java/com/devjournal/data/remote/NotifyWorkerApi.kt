@@ -16,7 +16,7 @@ class NotifyWorkerApi @Inject constructor(
     private val client: OkHttpClient
 ) {
     companion object {
-        private const val WORKER_URL = "https://blog-notify-worker.yourname.workers.dev"
+        private const val WORKER_URL = "https://devjournal-worker.giveeaseapp.workers.dev/"
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
 

@@ -226,7 +226,11 @@ class PostDetailViewModel @Inject constructor(
                             type = "new_like",
                             targetUid = currentPost.authorId,
                             title = "New like on \"${currentPost.title}\"",
-                            body = "Someone liked your post"
+                            body = "Someone liked your post",
+                            data = mapOf(
+                                "postId" to postId,
+                                "senderUid" to uid
+                            )
                         )
                     } catch (notifErr: Exception) {
                         Log.w("DevJournal", "Failed to send like notification", notifErr)
@@ -317,14 +321,22 @@ class PostDetailViewModel @Inject constructor(
                             type = "comment_reply",
                             targetUid = replyingComment.userId,
                             title = "Reply to your comment",
-                            body = text.take(100)
+                            body = text.take(100),
+                            data = mapOf(
+                                "postId" to postId,
+                                "senderUid" to uid
+                            )
                         )
                     } else if (currentPost.authorId.isNotBlank() && currentPost.authorId != uid) {
                         notifyWorkerApi.sendNotification(
                             type = "new_comment",
                             targetUid = currentPost.authorId,
                             title = "New comment on \"${currentPost.title}\"",
-                            body = text.take(100)
+                            body = text.take(100),
+                            data = mapOf(
+                                "postId" to postId,
+                                "senderUid" to uid
+                            )
                         )
                     }
                 } catch (notifErr: Exception) {

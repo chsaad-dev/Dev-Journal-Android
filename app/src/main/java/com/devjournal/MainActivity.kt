@@ -66,6 +66,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
             val themeMode by mainViewModel.themeMode.collectAsState()
+            val unreadNotificationCount by mainViewModel.unreadNotificationCount.collectAsState()
 
             DevJournalTheme(themeMode = themeMode) {
                 val navController = rememberNavController()
@@ -132,6 +133,7 @@ class MainActivity : ComponentActivity() {
                             onNotificationsClick = {
                                 navController.navigate("notifications")
                             },
+                            unreadNotificationCount = unreadNotificationCount,
                             onAuthorClick = { authorId ->
                                 navController.navigate("profile?uid=$authorId")
                             },
@@ -291,6 +293,12 @@ class MainActivity : ComponentActivity() {
                         NotificationsScreen(
                             onBackClick = {
                                 navController.popBackStack()
+                            },
+                            onNavigateToPost = { postId ->
+                                navController.navigate("postdetail/$postId")
+                            },
+                            onNavigateToProfile = { userId ->
+                                navController.navigate("profile?uid=$userId")
                             }
                         )
                     }

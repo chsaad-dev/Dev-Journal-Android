@@ -11,12 +11,14 @@ import com.devjournal.data.repository.AuthRepositoryImpl
 import com.devjournal.data.repository.BugReportRepositoryImpl
 import com.devjournal.data.repository.CommentRepositoryImpl
 import com.devjournal.data.repository.DraftRepositoryImpl
+import com.devjournal.data.repository.NotificationRepositoryImpl
 import com.devjournal.data.repository.PostRepositoryImpl
 import com.devjournal.data.repository.UserRepositoryImpl
 import com.devjournal.domain.repository.AuthRepository
 import com.devjournal.domain.repository.BugReportRepository
 import com.devjournal.domain.repository.CommentRepository
 import com.devjournal.domain.repository.DraftRepository
+import com.devjournal.domain.repository.NotificationRepository
 import com.devjournal.domain.repository.PostRepository
 import com.devjournal.domain.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth
@@ -76,6 +78,12 @@ abstract class AppModule {
     abstract fun bindBugReportRepository(
         impl: BugReportRepositoryImpl
     ): BugReportRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNotificationRepository(
+        impl: NotificationRepositoryImpl
+    ): NotificationRepository
 
     companion object {
         @Provides
