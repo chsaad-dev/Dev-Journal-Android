@@ -276,13 +276,19 @@ class PostEditorViewModel @Inject constructor(
                     result.onSuccess { _ ->
                         if (state.published) {
                             try {
+                                // Send one request to the worker; it fans out to all followers
                                 notifyWorkerApi.sendNotification(
-                                    type = "new_post",
-                                    targetUid = "",
-                                    title = "New post published: $title",
-                                    body = excerpt
+                                    type = "post_published",
+                                    targetUid = "",   // worker ignores this — fan-out driven by senderUid
+                                    title = "",       // worker generates per-recipient text
+                                    body = "",        // worker generates per-recipient text
+                                    data = mapOf(
+                                        "senderUid" to authorId,
+                                        "postId" to (result.getOrNull() ?: ""),
+                                        "postTitle" to title.take(80)
+                                    )
                                 )
-                            } catch (_: Exception) {}
+                            } catch (_: Exception) { /* best-effort — never block publish */ }
                         }
                         
                         // Delete local draft on success

@@ -8,7 +8,6 @@ import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -49,9 +48,6 @@ class NotificationRepositoryImpl @Inject constructor(
             }
         awaitClose { listener.remove() }
     }
-
-    override fun observeUnreadCount(uid: String): Flow<Int> =
-        observeNotifications(uid).map { list -> list.count { !it.read } }
 
     override suspend fun markAsRead(uid: String, notificationId: String) {
         notificationsCollection(uid)

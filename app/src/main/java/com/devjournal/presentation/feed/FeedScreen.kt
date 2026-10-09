@@ -564,7 +564,7 @@ fun FeedScreen(
                                                     }
                                                 },
                                                 onCommentClick = { onPostClick(post.id) },
-                                                onShareClick = { sharePost(context, post) },
+                                                onShareClick = { sharePost(context, post); viewModel.notifyShare(post) },
                                                 onPostClick = { onPostClick(post.id) },
                                                 canEdit = uiState.isAdmin || (uiState.currentUserId != null && post.authorId == uiState.currentUserId),
                                                 canDelete = uiState.isAdmin || (uiState.currentUserId != null && post.authorId == uiState.currentUserId),
@@ -772,7 +772,7 @@ fun FeedScreen(
                                                     }
                                                 },
                                                 onCommentClick = { onPostClick(post.id) },
-                                                onShareClick = { sharePost(context, post) },
+                                                onShareClick = { sharePost(context, post); viewModel.notifyShare(post) },
                                                 onPostClick = { onPostClick(post.id) },
                                                 canEdit = uiState.isAdmin || (uiState.currentUserId != null && post.authorId == uiState.currentUserId),
                                                 canDelete = uiState.isAdmin || (uiState.currentUserId != null && post.authorId == uiState.currentUserId),

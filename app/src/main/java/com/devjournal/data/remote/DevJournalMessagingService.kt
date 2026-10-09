@@ -56,7 +56,7 @@ class DevJournalMessagingService : FirebaseMessagingService() {
 
         // Worker payload may include postId or targetUid in data block
         val postId = message.data["postId"]
-        val targetUid = message.data["targetUid"] ?: message.data["uid"]
+        val targetUid = message.data["targetUid"] ?: message.data["uid"] ?: message.data["senderUid"]
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP

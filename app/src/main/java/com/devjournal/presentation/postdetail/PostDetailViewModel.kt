@@ -409,4 +409,25 @@ class PostDetailViewModel @Inject constructor(
     fun clearErrorMessage() {
         _uiState.update { it.copy(errorMessage = null) }
     }
+
+    /** Fire a new_share notification when the share sheet is launched. Best-effort. */
+    fun notifyShare() {
+        val uid = _uiState.value.currentUserId ?: return
+        val post = _uiState.value.post ?: return
+        val authorId = post.authorId
+        if (authorId.isBlank() || authorId == uid) return  // no self-notify
+        viewModelScope.launch {
+            try {
+                val senderName = _uiState.value.authorName
+                    .ifBlank { getUserProfileUseCase(uid)?.name ?: "Someone" }
+                notifyWorkerApi.sendNotification(
+                    type = "new_share",
+                    targetUid = authorId,
+                    title = "$senderName shared your post",
+                    body = post.title.take(80),
+                    data = mapOf("postId" to post.id, "senderUid" to uid)
+                )
+            } catch (_: Exception) { /* best-effort */ }
+        }
+    }
 }

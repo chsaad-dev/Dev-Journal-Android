@@ -4,9 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devjournal.data.model.UserProfile
+import com.devjournal.data.remote.NotifyWorkerApi
 import com.devjournal.domain.usecase.FollowUserUseCase
 import com.devjournal.domain.usecase.GetFollowersUseCase
 import com.devjournal.domain.usecase.GetFollowingUseCase
+import com.devjournal.domain.usecase.GetUserProfileUseCase
 import com.devjournal.domain.usecase.IsFollowingUseCase
 import com.devjournal.domain.usecase.ObserveAuthStateUseCase
 import com.devjournal.domain.usecase.UnfollowUserUseCase
@@ -41,6 +43,8 @@ class FollowListViewModel @Inject constructor(
     private val unfollowUserUseCase: UnfollowUserUseCase,
     private val isFollowingUseCase: IsFollowingUseCase,
     private val observeAuthStateUseCase: ObserveAuthStateUseCase,
+    private val getUserProfileUseCase: GetUserProfileUseCase,
+    private val notifyWorkerApi: NotifyWorkerApi,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -132,6 +136,22 @@ class FollowListViewModel @Inject constructor(
                 unfollowUserUseCase(currentUid, targetUid)
             } else {
                 followUserUseCase(currentUid, targetUid)
+            }
+
+            result.onSuccess {
+                // Fire follow notification only on the follow action (not unfollow)
+                if (!currentlyFollowing) {
+                    try {
+                        val senderName = getUserProfileUseCase(currentUid)?.name ?: "Someone"
+                        notifyWorkerApi.sendNotification(
+                            type = "follow",
+                            targetUid = targetUid,
+                            title = "$senderName started following you",
+                            body = "",
+                            data = mapOf("senderUid" to currentUid)
+                        )
+                    } catch (_: Exception) { /* best-effort */ }
+                }
             }
 
             result.onFailure {

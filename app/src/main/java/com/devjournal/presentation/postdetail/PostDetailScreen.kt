@@ -240,7 +240,7 @@ fun PostDetailScreen(
                             )
                         }
                         // Share action
-                        IconButton(onClick = { post?.let { sharePost(context, it) } }) {
+                        IconButton(onClick = { post?.let { sharePost(context, it); viewModel.notifyShare() } }) {
                             Icon(
                                 imageVector = Icons.Outlined.Share,
                                 contentDescription = "Share",
@@ -268,7 +268,7 @@ fun PostDetailScreen(
                             icon = Icons.Outlined.Share,
                             contentDescription = "Share",
                             tint = Color.White,
-                            onClick = { post?.let { sharePost(context, it) } }
+                            onClick = { post?.let { sharePost(context, it); viewModel.notifyShare() } }
                         )
                         if (post != null && (uiState.isAdmin || uiState.currentUserId == post.authorId)) {
                             Spacer(modifier = Modifier.width(8.dp))

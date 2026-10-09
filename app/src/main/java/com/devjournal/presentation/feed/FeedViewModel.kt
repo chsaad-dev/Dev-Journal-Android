@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devjournal.data.model.Post
+import com.devjournal.data.remote.NotifyWorkerApi
 import com.devjournal.domain.usecase.GetPostsUseCase
 import com.devjournal.domain.usecase.GetFollowingPostsUseCase
 import com.devjournal.domain.usecase.GetUserProfileUseCase
@@ -72,7 +73,8 @@ class FeedViewModel @Inject constructor(
     private val observeLikedPostIdsUseCase: ObserveLikedPostIdsUseCase,
     private val observeBookmarkedPostIdsUseCase: ObserveBookmarkedPostIdsUseCase,
     private val deletePostUseCase: DeletePostUseCase,
-    private val networkMonitor: NetworkMonitor
+    private val networkMonitor: NetworkMonitor,
+    private val notifyWorkerApi: NotifyWorkerApi
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FeedUiState())
@@ -344,6 +346,26 @@ class FeedViewModel @Inject constructor(
             }
             try {
                 likePostUseCase(postId, uid, alreadyLiked)
+                // Fire like notification — only on the like action (not unlike), never to self
+                if (!alreadyLiked) {
+                    val post = _uiState.value.allPosts.find { it.id == postId }
+                        ?: _uiState.value.followingPosts.find { it.id == postId }
+                    val authorId = post?.authorId
+                    if (post != null && !authorId.isNullOrBlank() && authorId != uid) {
+                        val senderName = _uiState.value.authorNames[uid]
+                            ?: getUserProfileUseCase(uid)?.name
+                            ?: "Someone"
+                        try {
+                            notifyWorkerApi.sendNotification(
+                                type = "new_like",
+                                targetUid = authorId,
+                                title = "$senderName liked your post",
+                                body = post.title.take(80),
+                                data = mapOf("postId" to post.id, "senderUid" to uid)
+                            )
+                        } catch (_: Exception) { /* best-effort */ }
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("DevJournal", "Like action failed", e)
                 // Revert on error
@@ -401,5 +423,26 @@ class FeedViewModel @Inject constructor(
 
     fun clearErrorMessage() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    /** Fire a new_share notification when the share sheet is launched for a feed post. Best-effort. */
+    fun notifyShare(post: com.devjournal.data.model.Post) {
+        val uid = _uiState.value.currentUserId ?: return  // skip anonymous users
+        val authorId = post.authorId
+        if (authorId.isBlank() || authorId == uid) return  // no self-notify
+        viewModelScope.launch {
+            try {
+                val senderName = _uiState.value.authorNames[uid]
+                    ?: getUserProfileUseCase(uid)?.name
+                    ?: "Someone"
+                notifyWorkerApi.sendNotification(
+                    type = "new_share",
+                    targetUid = authorId,
+                    title = "$senderName shared your post",
+                    body = post.title.take(80),
+                    data = mapOf("postId" to post.id, "senderUid" to uid)
+                )
+            } catch (_: Exception) { /* best-effort */ }
+        }
     }
 }

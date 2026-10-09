@@ -12,7 +12,5 @@ interface NotificationRepository {
 
     /** Mark all unread notifications as read. */
     suspend fun markAllAsRead(uid: String)
-
-    /** Count of unread notifications for badge display. */
-    fun observeUnreadCount(uid: String): Flow<Int>
 }
+
