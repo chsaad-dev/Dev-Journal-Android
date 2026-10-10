@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 enum class UsernameAvailability {
@@ -95,6 +96,7 @@ class ProfileViewModel @Inject constructor(
     private var followingJob: Job? = null
     private var usernameCheckJob: Job? = null
     private var currentAuthUid: String? = null
+    private var currentAuthName: String? = null
 
     init {
         observeCurrentUser()
@@ -107,6 +109,7 @@ class ProfileViewModel @Inject constructor(
                     profileJob?.cancel()
                     followingJob?.cancel()
                     currentAuthUid = null
+                    currentAuthName = null
                     _uiState.update {
                         it.copy(
                             isSignedOut = true,
@@ -120,6 +123,7 @@ class ProfileViewModel @Inject constructor(
                     }
                 } else {
                     currentAuthUid = user.uid
+                    currentAuthName = user.displayName?.ifBlank { null } ?: user.email?.substringBefore("@")
                     _uiState.update { it.copy(isSignedOut = false) }
                     
                     val uidToLoad = navUid ?: user.uid
@@ -259,17 +263,32 @@ class ProfileViewModel @Inject constructor(
             result.onSuccess {
                 // Send push notification on follow (not unfollow)
                 if (!currentlyFollowing) {
-                    val currentUserName = _uiState.value.profile?.name
-                        ?: observeAuthStateUseCase().firstOrNull()?.displayName
-                        ?: "Someone"
                     launch {
-                        notifyWorkerApi.sendNotification(
-                            type = "follow",
-                            targetUid = targetUid,
-                            title = "$currentUserName started following you",
-                            body = "Tap to view their profile",
-                            data = mapOf("senderUid" to currentUid)
-                        )
+                        try {
+                            val currentUserName = currentAuthName?.ifBlank { null }
+                                ?: observeAuthStateUseCase().firstOrNull()?.displayName?.ifBlank { null }
+                                ?: withTimeoutOrNull(800L) {
+                                    try {
+                                        getUserProfileUseCase(currentUid)?.let { p ->
+                                            p.name.ifBlank { p.displayUsername.ifBlank { null } }
+                                        }
+                                    } catch (_: Exception) { null }
+                                }
+                                ?: "Someone"
+
+                            val notifResult = notifyWorkerApi.sendNotification(
+                                type = "follow",
+                                targetUid = targetUid,
+                                title = "$currentUserName started following you",
+                                body = "Tap to view their profile",
+                                data = mapOf("senderUid" to currentUid)
+                            )
+                            notifResult.onFailure { err ->
+                                Log.e("DevJournalFollow", "Worker notification dispatch failed: ${err.message}", err)
+                            }
+                        } catch (e: Exception) {
+                            Log.e("DevJournalFollow", "Failed to send follow notification: ${e.message}", e)
+                        }
                     }
                 }
             }

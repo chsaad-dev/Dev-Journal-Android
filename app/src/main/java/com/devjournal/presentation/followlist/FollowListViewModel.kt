@@ -142,12 +142,14 @@ class FollowListViewModel @Inject constructor(
                 // Fire follow notification only on the follow action (not unfollow)
                 if (!currentlyFollowing) {
                     try {
-                        val senderName = getUserProfileUseCase(currentUid)?.name ?: "Someone"
+                        val senderName = getUserProfileUseCase(currentUid)?.name?.ifBlank { null }
+                            ?: observeAuthStateUseCase().firstOrNull()?.displayName?.ifBlank { null }
+                            ?: "Someone"
                         notifyWorkerApi.sendNotification(
                             type = "follow",
                             targetUid = targetUid,
                             title = "$senderName started following you",
-                            body = "",
+                            body = "Tap to view their profile",
                             data = mapOf("senderUid" to currentUid)
                         )
                     } catch (_: Exception) { /* best-effort */ }

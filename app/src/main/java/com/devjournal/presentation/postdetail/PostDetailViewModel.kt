@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -418,8 +419,9 @@ class PostDetailViewModel @Inject constructor(
         if (authorId.isBlank() || authorId == uid) return  // no self-notify
         viewModelScope.launch {
             try {
-                val senderName = _uiState.value.authorName
-                    .ifBlank { getUserProfileUseCase(uid)?.name ?: "Someone" }
+                val senderName = getUserProfileUseCase(uid)?.name?.ifBlank { null }
+                    ?: observeAuthStateUseCase().firstOrNull()?.displayName?.ifBlank { null }
+                    ?: "Someone"
                 notifyWorkerApi.sendNotification(
                     type = "new_share",
                     targetUid = authorId,
