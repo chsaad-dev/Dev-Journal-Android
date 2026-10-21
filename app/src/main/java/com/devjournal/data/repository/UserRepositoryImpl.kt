@@ -94,6 +94,13 @@ class UserRepositoryImpl @Inject constructor(
             .await()
     }
 
+    override suspend fun removeFcmToken(uid: String, token: String) {
+        firestore.collection("users")
+            .document(uid)
+            .update("fcmTokens", FieldValue.arrayRemove(token))
+            .await()
+    }
+
     override suspend fun followUser(currentUid: String, targetUid: String): Result<Unit> = try {
         firestore.runTransaction { transaction ->
             val currentUserRef = firestore.collection("users").document(currentUid)

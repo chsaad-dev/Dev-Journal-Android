@@ -47,6 +47,10 @@ class DevJournalMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
 
+        // Suppress notifications if no user is signed in on this device.
+        // This guards against stale FCM tokens that haven't been cleaned up yet.
+        if (auth.currentUser == null) return
+
         val title = message.notification?.title
             ?: message.data["title"]
             ?: "DevJournal"
