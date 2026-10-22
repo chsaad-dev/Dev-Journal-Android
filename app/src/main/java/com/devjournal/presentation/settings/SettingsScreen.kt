@@ -74,9 +74,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.devjournal.domain.model.ThemeMode
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
@@ -216,12 +218,23 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // User Header Profile Overview
-            if (currentUser != null) {
+            val profile = uiState.profile
+            if (currentUser != null || profile != null) {
+                val displayName = profile?.name?.ifBlank { null }
+                    ?: currentUser?.displayName?.ifBlank { null }
+                    ?: "DevJournal Author"
+                val email = profile?.email?.ifBlank { null }
+                    ?: currentUser?.email
+                    ?: "Active Account"
+                val photoUrl = profile?.photoUrl?.ifBlank { null }
+                    ?: currentUser?.photoUrl?.toString()
+
                 item {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+                            .clickable { onEditProfileClick() },
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -241,22 +254,31 @@ fun SettingsScreen(
                                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Person,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(28.dp)
-                                )
+                                if (!photoUrl.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = photoUrl,
+                                        contentDescription = "Profile Photo",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Person,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
                             }
                             Spacer(modifier = Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = currentUser.displayName?.ifBlank { "DevJournal Author" } ?: "DevJournal Author",
+                                    text = displayName,
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = currentUser.email ?: "Active Account",
+                                    text = email,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
