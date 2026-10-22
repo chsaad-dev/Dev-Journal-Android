@@ -2,8 +2,11 @@ package com.devjournal.presentation.postdetail
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,6 +39,8 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.DeleteOutline
@@ -139,6 +144,7 @@ fun PostDetailScreen(
     var commentIdToDelete by remember { mutableStateOf<String?>(null) }
     var lightboxImageUrl by remember { mutableStateOf<String?>(null) }
     var lightboxAltText by remember { mutableStateOf("") }
+    var expandedThreadIds by remember { mutableStateOf(emptySet<String>()) }
 
     if (showDeletePostDialog) {
         AlertDialog(
@@ -740,10 +746,8 @@ fun PostDetailScreen(
                         }
                     } else {
                         val rootComments = remember(uiState.comments) {
-                            uiState.comments.filter { it.parentCommentId.isNullOrBlank() }
-                        }
-                        val repliesByParent = remember(uiState.comments) {
-                            uiState.comments.filter { !it.parentCommentId.isNullOrBlank() }.groupBy { it.parentCommentId }
+                            val allIds = uiState.comments.map { it.id }.toSet()
+                            uiState.comments.filter { it.parentCommentId.isNullOrBlank() || !allIds.contains(it.parentCommentId) }
                         }
 
                         Column(
@@ -751,17 +755,29 @@ fun PostDetailScreen(
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             rootComments.forEach { rootComment ->
-                                val replies = repliesByParent[rootComment.id] ?: emptyList()
+                                val replies = remember(uiState.comments, rootComment.id) {
+                                    getAllRepliesForRoot(rootComment.id, uiState.comments)
+                                }
+                                val isExpanded = expandedThreadIds.contains(rootComment.id)
 
                                 CommentThreadItem(
                                     rootComment = rootComment,
                                     replies = replies,
+                                    isExpanded = isExpanded,
+                                    onToggleExpand = {
+                                        expandedThreadIds = if (isExpanded) {
+                                            expandedThreadIds - rootComment.id
+                                        } else {
+                                            expandedThreadIds + rootComment.id
+                                        }
+                                    },
                                     currentUserId = uiState.currentUserId,
                                     isAdmin = uiState.isAdmin,
                                     commenterNames = uiState.commenterNames,
                                     commenterUsernames = uiState.commenterUsernames,
                                     commenterPhotoUrls = uiState.commenterPhotoUrls,
                                     onReply = { targetComment, name ->
+                                        expandedThreadIds = expandedThreadIds + rootComment.id
                                         viewModel.onReplyToComment(targetComment, name)
                                     },
                                     onDelete = { commentId -> commentIdToDelete = commentId }
@@ -805,6 +821,8 @@ fun PostDetailScreen(
 fun CommentThreadItem(
     rootComment: Comment,
     replies: List<Comment>,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
     currentUserId: String?,
     isAdmin: Boolean,
     commenterNames: Map<String, String>,
@@ -829,44 +847,115 @@ fun CommentThreadItem(
             onDelete = { onDelete(rootComment.id) }
         )
 
-        // Nested Replies
+        // Nested Replies Section (Instagram / Threads style expandable accordion)
         if (replies.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, top = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = fadeIn(animationSpec = tween(220)) + expandVertically(animationSpec = tween(220)),
+                exit = fadeOut(animationSpec = tween(180)) + shrinkVertically(animationSpec = tween(180))
             ) {
-                replies.forEach { reply ->
-                    val replyAuthorName = commenterNames[reply.userId] ?: ""
-                    val replyUsername = commenterUsernames[reply.userId] ?: replyAuthorName
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, top = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    replies.forEach { reply ->
+                        val replyAuthorName = commenterNames[reply.userId] ?: ""
+                        val replyUsername = commenterUsernames[reply.userId] ?: replyAuthorName
 
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        // Thread vertical accent line
-                        Box(
-                            modifier = Modifier
-                                .width(2.dp)
-                                .height(48.dp)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(1.dp))
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Box(modifier = Modifier.weight(1f)) {
-                            CommentItem(
-                                comment = reply,
-                                currentUserId = currentUserId,
-                                isAdmin = isAdmin,
-                                commenterName = replyAuthorName,
-                                commenterPhotoUrl = commenterPhotoUrls[reply.userId],
-                                isReply = true,
-                                onReply = { onReply(reply, replyUsername) },
-                                onDelete = { onDelete(reply.id) }
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            // Thread vertical accent line
+                            Box(
+                                modifier = Modifier
+                                    .width(2.dp)
+                                    .height(48.dp)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(1.dp))
                             )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Box(modifier = Modifier.weight(1f)) {
+                                CommentItem(
+                                    comment = reply,
+                                    currentUserId = currentUserId,
+                                    isAdmin = isAdmin,
+                                    commenterName = replyAuthorName,
+                                    commenterPhotoUrl = commenterPhotoUrls[reply.userId],
+                                    isReply = true,
+                                    onReply = { onReply(reply, replyUsername) },
+                                    onDelete = { onDelete(reply.id) }
+                                )
+                            }
                         }
                     }
                 }
             }
+
+            // Instagram-style View / Hide replies toggle button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, top = if (isExpanded) 8.dp else 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onToggleExpand() }
+                        .padding(vertical = 4.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(28.dp)
+                            .height(1.5.dp)
+                            .background(
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
+                                RoundedCornerShape(1.dp)
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = if (!isExpanded) {
+                            if (replies.size == 1) "View 1 reply" else "View ${replies.size} replies"
+                        } else {
+                            if (replies.size == 1) "Hide reply" else "Hide replies"
+                        },
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = if (!isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                        contentDescription = if (!isExpanded) "Expand replies" else "Hide replies",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
     }
+}
+
+/**
+ * Traverses parent-child comment tree to collect all direct and indirect replies under a root comment.
+ */
+private fun getAllRepliesForRoot(rootCommentId: String, allComments: List<Comment>): List<Comment> {
+    val repliesByParent = allComments.filter { !it.parentCommentId.isNullOrBlank() }.groupBy { it.parentCommentId }
+    val result = mutableListOf<Comment>()
+    val visited = mutableSetOf<String>()
+    val queue = ArrayDeque<String>()
+    queue.add(rootCommentId)
+    while (queue.isNotEmpty()) {
+        val currentId = queue.removeFirst()
+        val directReplies = repliesByParent[currentId] ?: emptyList()
+        for (reply in directReplies) {
+            if (visited.add(reply.id)) {
+                result.add(reply)
+                queue.add(reply.id)
+            }
+        }
+    }
+    return result.sortedBy { it.createdAt?.toDate()?.time ?: 0L }
 }
 
 /**

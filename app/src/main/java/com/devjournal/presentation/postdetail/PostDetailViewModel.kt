@@ -305,10 +305,18 @@ class PostDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmittingComment = true, errorMessage = null) }
             try {
+                val targetParentId = if (replyingComment != null) {
+                    if (!replyingComment.parentCommentId.isNullOrBlank()) {
+                        replyingComment.parentCommentId
+                    } else {
+                        replyingComment.id
+                    }
+                } else null
+
                 val newComment = Comment(
                     userId = uid,
                     text = text,
-                    parentCommentId = replyingComment?.id,
+                    parentCommentId = targetParentId,
                     replyToUsername = replyingName
                 )
                 withTimeout(10000L) {
